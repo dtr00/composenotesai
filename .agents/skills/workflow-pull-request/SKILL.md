@@ -11,11 +11,12 @@ Every pull request explains what changed and why, and shows it. A reviewer shoul
 
 1. Finish the pre-push workflow in `AGENTS.md` on the diff against `origin/main`, then commit with `workflow-conventional-commit`.
 2. Decide whether the change is visible: any change to what a user can see in the desktop app or the website, including generated images such as the link preview.
-3. Visible change: capture before and after images (below). Not visible: skip to step 5 and write the full documentation section.
-4. Host the images (below).
-5. Write the body to a file from the template (below), then create the pull request with `gh pr create --base main --title "<conventional commit title>" --body-file <file>`.
+3. Visible change: capture before and after images (below). Not visible: skip to step 4 and write the full documentation section.
+4. Write the body to a file from the template (below), referencing each image by local path.
+5. Create the pull request with `gh pr create --base main --title "<conventional commit title>" --body-file <file>` and one `--attach` per image (below).
 6. Link the pull request to the thread when the `link_pull_request` tool exists.
-7. Report the pull request URL, and say which images or sections you included.
+7. Open the pull request and confirm every image renders inline.
+8. Report the pull request URL, and say which images or sections you included.
 
 ## Capture images
 
@@ -28,33 +29,19 @@ Every pull request explains what changed and why, and shows it. A reviewer shoul
 - One pair per visible change. Crop to the area that changed when the full window adds nothing. Keep each file under about 400 KB: PNG or WebP, 1600 px wide at most.
 - If a before image is impossible (new screen, new asset), say "New" in the Before cell and show only the after image.
 
-## Host the images
+## Attach the images
 
-Images live on an orphan `pr-assets` branch, never on the feature branch or `main`. That keeps the app repository small. The repository is public, so raw URLs render in the description.
+Upload images with GitHub's native attachments through `gh --attach`. Never commit images to the repository or to a side branch, and never link external image URLs.
 
-```sh
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-DIR=$(git branch --show-current | tr '/' '-')
-WT=$(mktemp -d)
-if git ls-remote --exit-code --heads origin pr-assets >/dev/null 2>&1; then
-  git fetch origin pr-assets
-  git worktree add --detach "$WT" origin/pr-assets
-else
-  git worktree add --detach "$WT"
-  git -C "$WT" checkout --orphan pr-assets
-  git -C "$WT" rm -rf . -q
-fi
-mkdir -p "$WT/$DIR"
-cp before.png after.png "$WT/$DIR/"
-git -C "$WT" add "$DIR"
-git -C "$WT" commit -m "chore: add images for $DIR"
-git -C "$WT" push origin HEAD:pr-assets
-SHA=$(git -C "$WT" rev-parse HEAD)
-git worktree remove --force "$WT"
-echo "https://raw.githubusercontent.com/$REPO/$SHA/$DIR/after.png"
-```
-
-Always link by commit SHA, not by branch name, so an image never changes under an old pull request. Look at the target before pushing: this branch holds images only, and the push must never touch another branch.
+- Reference each image in the body by its local path, for example `![After: the new link card](./after.png)`. `gh` uploads the file and rewrites the reference into an inline attachment.
+- Put alt text on every image: `![alt](./file.png)` in the body, or `--attach './file.png#alt text'`.
+- Create: `gh pr create --base main --title "<title>" --body-file <body> --attach ./before.png --attach ./after.png`
+- Update: `gh pr edit <number> --body-file <body> --attach ./before.png --attach ./after.png`
+- Comment: `gh pr comment <number> --body-file <body> --attach ./before.png --attach ./after.png`
+- Use a body file so line breaks are real newlines. Run the command from the folder holding the images, or use paths relative to where you run it, and pass `-R <owner>/<repo>` when outside the repository.
+- An attached file the body does not reference is appended to the end of the body, so reference each one where you want it.
+- If some uploads fail, the pull request is still created or updated. Open the pull request afterwards and confirm every image renders.
+- If your `gh` has no `--attach` flag (`gh pr create --help`), upgrade it. If that is impossible, keep the local paths and report the blocker.
 
 ## Description template
 
@@ -75,7 +62,7 @@ One to three sentences: what this changes and why.
 
 | Before | After |
 | ------ | ----- |
-| ![Before: what it shows](raw-url-with-sha) | ![After: what it shows](raw-url-with-sha) |
+| ![Before: what it shows](./before.png) | ![After: what it shows](./after.png) |
 
 ## Testing
 
@@ -104,6 +91,6 @@ When the change has nothing to screenshot (native code, build, CI, docs, refacto
 - The title is a Conventional Commit message, under 72 characters.
 - Describe the whole branch, not only the last commit. Read `git log origin/main..HEAD` and `git diff origin/main...HEAD` before writing.
 - Never claim anything you did not run or look at.
-- Never put screenshots in the repository to host them.
+- Never put screenshots in the repository, and never link them from a side branch or an external host.
 - Updating an existing pull request: edit the body with `gh pr edit --body-file`, and refresh stale images.
 - End the body with the attribution line the harness specifies, if any.
