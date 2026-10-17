@@ -38,6 +38,7 @@ export function bumpVersion(version: string, bump: Bump): string {
   return `${major}.${minor}.${patch + 1}`;
 }
 
+const appDir = join(import.meta.dirname, "..");
 const git = (...args: string[]) => execFileSync("git", args, { cwd: appDir, encoding: "utf8" });
 
 function replaceIn(path: string, pattern: RegExp, replacement: string) {
@@ -45,8 +46,6 @@ function replaceIn(path: string, pattern: RegExp, replacement: string) {
   if (!pattern.test(text)) throw new Error(`No version found in ${path}.`);
   writeFileSync(path, text.replace(pattern, replacement));
 }
-
-const appDir = join(import.meta.dirname, "..");
 
 function main() {
   const cargoToml = join(appDir, "src-tauri/Cargo.toml");

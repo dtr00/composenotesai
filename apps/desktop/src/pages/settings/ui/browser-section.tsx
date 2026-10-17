@@ -8,12 +8,47 @@ import { CACHE_CLEAR_CHOICES, clearBrowserCacheNow } from "../model/browser-cach
 import { SETTING_IDS } from "../model/settings-search";
 import { SettingsGroup } from "./settings-group";
 
-function selectEngine(value: SearchEngine | null) {
-  if (value) updateSettings({ searchEngine: value });
+interface ChoiceCardProps<T extends string | number> {
+  id: string;
+  title: string;
+  description: string;
+  choices: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
 }
 
-function selectCacheClearing(hours: number | null) {
-  if (hours !== null) updateSettings({ browserCacheClearHours: hours });
+function ChoiceCard<T extends string | number>({
+  id,
+  title,
+  description,
+  choices,
+  value,
+  onChange,
+}: ChoiceCardProps<T>) {
+  const labelId = `${id}-label`;
+
+  return (
+    <Card id={id} size="sm">
+      <CardHeader>
+        <CardTitle id={labelId}>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+        <CardAction className="self-center">
+          <Select items={choices} value={value} onValueChange={(next: T | null) => next !== null && onChange(next)}>
+            <SelectTrigger aria-labelledby={labelId} className="min-w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {choices.map((choice) => (
+                <SelectItem key={choice.value} value={choice.value}>
+                  {choice.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardAction>
+      </CardHeader>
+    </Card>
+  );
 }
 
 export function BrowserSection() {
@@ -21,26 +56,14 @@ export function BrowserSection() {
 
   return (
     <SettingsGroup name="browser" title="Browser">
-      <Card id={SETTING_IDS.searchEngine} size="sm">
-        <CardHeader>
-          <CardTitle id="search-engine-label">Search engine</CardTitle>
-          <CardDescription>Used for searches from the address bar.</CardDescription>
-          <CardAction className="self-center">
-            <Select items={SEARCH_ENGINE_OPTIONS} value={searchEngine} onValueChange={selectEngine}>
-              <SelectTrigger aria-labelledby="search-engine-label" className="min-w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end">
-                {SEARCH_ENGINE_OPTIONS.map((engine) => (
-                  <SelectItem key={engine.value} value={engine.value}>
-                    {engine.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardAction>
-        </CardHeader>
-      </Card>
+      <ChoiceCard
+        id={SETTING_IDS.searchEngine}
+        title="Search engine"
+        description="Used for searches from the address bar."
+        choices={SEARCH_ENGINE_OPTIONS}
+        value={searchEngine}
+        onChange={(engine: SearchEngine) => updateSettings({ searchEngine: engine })}
+      />
       <Card id={SETTING_IDS.browserCache} size="sm">
         <CardHeader>
           <CardTitle>Cache</CardTitle>
@@ -52,28 +75,14 @@ export function BrowserSection() {
           </CardAction>
         </CardHeader>
       </Card>
-      <Card id={SETTING_IDS.browserCacheClearing} size="sm">
-        <CardHeader>
-          <CardTitle id="cache-clearing-label">Clear cache automatically</CardTitle>
-          <CardDescription>
-            The cache is cleared each time the app starts, and on this schedule while it stays open.
-          </CardDescription>
-          <CardAction className="self-center">
-            <Select items={CACHE_CLEAR_CHOICES} value={browserCacheClearHours} onValueChange={selectCacheClearing}>
-              <SelectTrigger aria-labelledby="cache-clearing-label" className="min-w-36">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end">
-                {CACHE_CLEAR_CHOICES.map((choice) => (
-                  <SelectItem key={choice.value} value={choice.value}>
-                    {choice.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardAction>
-        </CardHeader>
-      </Card>
+      <ChoiceCard
+        id={SETTING_IDS.browserCacheClearing}
+        title="Clear cache automatically"
+        description="The cache is cleared each time the app starts, and on this schedule while it stays open."
+        choices={CACHE_CLEAR_CHOICES}
+        value={browserCacheClearHours}
+        onChange={(hours) => updateSettings({ browserCacheClearHours: hours })}
+      />
     </SettingsGroup>
   );
 }
