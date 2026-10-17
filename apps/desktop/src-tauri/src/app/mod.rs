@@ -12,7 +12,7 @@ use crate::features::notes::{
 use crate::features::settings::{SettingsStore, CREATE_SETTINGS_TABLE};
 use crate::features::skills::{SkillStore, CREATE_SKILLS_TABLE};
 use crate::features::speech_models::SpeechModels;
-use crate::features::storage::{clear_web_caches, engine_dir, language_model_dir, speech_model_dir};
+use crate::features::storage::{engine_dir, language_model_dir, speech_model_dir};
 use crate::features::system::SystemMonitor;
 use crate::features::tab_session::{TabSessionStore, CREATE_TAB_GROUP_TABLES, CREATE_TAB_SESSION_TABLE};
 use crate::features::voice::{Recorder, Transcriber, VoiceNote};
@@ -29,10 +29,12 @@ use crate::shared::db::{
 };
 use crate::shared::media_server;
 use crate::shared::web;
+use crate::shared::web_cache::clear_web_caches;
 use tauri::Manager;
 
 mod agent;
 mod background;
+mod browser_cache;
 
 #[cfg(target_os = "macos")]
 mod menu;
@@ -110,6 +112,7 @@ pub fn run() {
             let (record, cancel) = (saved.record.as_deref(), saved.cancel.as_deref());
             voice_shortcuts::register(app, voice::on_shortcut, record, cancel, saved.set_up)?;
             background::watch_from_start(app.handle());
+            browser_cache::clear_on_schedule(app.handle());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -150,6 +153,7 @@ pub fn run() {
             browser::browser_stop,
             browser::browser_close,
             browser::browser_close_all,
+            browser::browser_clear_cache,
             browser::browser_set_hotkeys,
             settings::load_settings,
             settings::save_settings,

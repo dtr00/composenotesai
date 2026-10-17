@@ -57,6 +57,7 @@ export interface Settings {
   trashRetentionDays: number;
   mediaFolderId: number | null;
   searchEngine: SearchEngine;
+  browserCacheClearHours: number;
   micDevice: string | null;
   voiceModel: string | null;
   holdToRecord: boolean;

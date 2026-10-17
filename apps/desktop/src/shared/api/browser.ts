@@ -44,6 +44,7 @@ export const reloadBrowserView = (tab: number) => invoke<void>("browser_reload",
 export const stopBrowserView = (tab: number) => invoke<void>("browser_stop", { tab });
 export const closeBrowserView = (tab: number) => invoke<void>("browser_close", { tab });
 export const closeAllBrowserViews = () => invoke<void>("browser_close_all");
+export const clearBrowserCache = () => invoke<void>("browser_clear_cache");
 export const setBrowserHotkeys = (bindings: BrowserHotkey[]) => invoke<void>("browser_set_hotkeys", { bindings });
 
 export const onPageLoad = (handler: (load: PageLoad) => void) =>

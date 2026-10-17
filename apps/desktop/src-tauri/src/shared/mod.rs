@@ -15,3 +15,4 @@ pub mod secret;
 pub mod testing;
 pub mod text;
 pub mod web;
+pub mod web_cache;

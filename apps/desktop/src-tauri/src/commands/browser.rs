@@ -1,6 +1,6 @@
 use crate::features::browser::{self, AppHotkeys, Bounds, Binding};
 use crate::shared::error::Result;
-use tauri::{State, Window};
+use tauri::{AppHandle, State, Window};
 
 #[tauri::command]
 pub fn browser_set_hotkeys(hotkeys: State<'_, AppHotkeys>, bindings: Vec<Binding>) {
@@ -40,4 +40,9 @@ pub async fn browser_close(window: Window, tab: u32) -> Result<()> {
 #[tauri::command]
 pub async fn browser_close_all(window: Window) -> Result<()> {
     browser::close_all(&window)
+}
+
+#[tauri::command]
+pub async fn browser_clear_cache(app: AppHandle) -> Result<()> {
+    browser::clear_cache(&app)
 }

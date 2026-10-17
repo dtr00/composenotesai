@@ -6,6 +6,8 @@ use std::collections::BTreeMap;
 const MAX_KEYBINDING_LEN: usize = 32;
 const DEFAULT_TRASH_RETENTION_DAYS: u32 = 30;
 const MAX_TRASH_RETENTION_DAYS: u32 = 3650;
+const BROWSER_CACHE_CLEAR_HOURS: [u32; 4] = [0, 1, 6, 24];
+const DEFAULT_BROWSER_CACHE_CLEAR_HOURS: u32 = 24;
 
 pub const SIDEBAR_WIDTH_RANGE: Bounded = Bounded { min: 200.0, max: 420.0, default: 240.0 };
 pub const CHAT_WIDTH_RANGE: Bounded = Bounded { min: 320.0, max: 720.0, default: 400.0 };
@@ -89,6 +91,7 @@ pub struct Settings {
     pub trash_retention_days: u32,
     pub media_folder_id: Option<i64>,
     pub search_engine: SearchEngine,
+    pub browser_cache_clear_hours: u32,
     pub mic_device: Option<String>,
     pub voice_model: Option<String>,
     pub hold_to_record: bool,
@@ -118,6 +121,7 @@ impl Default for Settings {
             trash_retention_days: DEFAULT_TRASH_RETENTION_DAYS,
             media_folder_id: None,
             search_engine: SearchEngine::default(),
+            browser_cache_clear_hours: DEFAULT_BROWSER_CACHE_CLEAR_HOURS,
             mic_device: None,
             voice_model: None,
             hold_to_record: true,
@@ -131,6 +135,13 @@ impl Default for Settings {
 
 pub fn clamp_trash_retention(days: i64) -> u32 {
     u32::try_from(days.max(0)).unwrap_or(u32::MAX).min(MAX_TRASH_RETENTION_DAYS)
+}
+
+pub fn browser_cache_clear_hours(hours: i64) -> u32 {
+    u32::try_from(hours)
+        .ok()
+        .filter(|hours| BROWSER_CACHE_CLEAR_HOURS.contains(hours))
+        .unwrap_or(DEFAULT_BROWSER_CACHE_CLEAR_HOURS)
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -150,6 +161,14 @@ mod tests {
         assert_eq!(clamp_trash_retention(0), 0);
         assert_eq!(clamp_trash_retention(-5), 0);
         assert_eq!(clamp_trash_retention(99_999), MAX_TRASH_RETENTION_DAYS);
+    }
+
+    #[test]
+    fn browser_cache_clear_hours_fall_back_to_daily() {
+        assert_eq!(browser_cache_clear_hours(0), 0);
+        assert_eq!(browser_cache_clear_hours(6), 6);
+        assert_eq!(browser_cache_clear_hours(5), DEFAULT_BROWSER_CACHE_CLEAR_HOURS);
+        assert_eq!(browser_cache_clear_hours(-1), DEFAULT_BROWSER_CACHE_CLEAR_HOURS);
     }
 
     #[test]

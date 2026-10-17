@@ -35,6 +35,7 @@ export const testSettings = (overrides: Partial<Settings> = {}): Settings => ({
   trashRetentionDays: 30,
   mediaFolderId: null,
   searchEngine: "google",
+  browserCacheClearHours: 24,
   micDevice: null,
   voiceModel: null,
   holdToRecord: false,
