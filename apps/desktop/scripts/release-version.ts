@@ -47,23 +47,23 @@ function replaceIn(path: string, pattern: RegExp, replacement: string) {
   writeFileSync(path, text.replace(pattern, replacement));
 }
 
-function main() {
+function releaseVersion(): string {
   const cargoToml = join(appDir, "src-tauri/Cargo.toml");
   const current = PACKAGE_VERSION.exec(readFileSync(cargoToml, "utf8"))?.[1];
   if (!current) throw new Error(`No version found in ${cargoToml}.`);
-  if (git("tag", "--list", `v${current}`).trim() === "") return;
+  if (git("tag", "--list", `v${current}`).trim() === "") return current;
   const messages = git("log", "--format=%B%x00", `v${current}..HEAD`, "--", ".").split("\0");
   const bump = releaseBump(messages.map((message) => message.trim()));
-  if (!bump) return;
+  if (!bump) return current;
   const next = bumpVersion(current, bump);
   replaceIn(cargoToml, PACKAGE_VERSION, `version = "${next}"`);
   replaceIn(join(appDir, "src-tauri/Cargo.lock"), LOCKED_VERSION, `$1"${next}"`);
-  console.log(next);
+  return next;
 }
 
 if (import.meta.main) {
   try {
-    main();
+    console.log(releaseVersion());
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     process.exit(1);

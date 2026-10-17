@@ -3,45 +3,11 @@ import { SEARCH_ENGINE_OPTIONS } from "../../../features/browser/lib/address";
 import type { SearchEngine } from "../../../shared/api/settings";
 import { Button } from "../../../shared/ui/button";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "../../../shared/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../shared/ui/select";
 import { Separator } from "../../../shared/ui/separator";
 import { CACHE_CLEAR_CHOICES, clearBrowserCacheNow } from "../model/browser-cache";
 import { SETTING_IDS } from "../model/settings-search";
+import { SettingSelect } from "./setting-select";
 import { SettingsGroup } from "./settings-group";
-
-interface ChoiceRowProps<T extends string | number> {
-  id: string;
-  title: string;
-  description: string;
-  choices: { value: T; label: string }[];
-  value: T;
-  onChange: (value: T) => void;
-}
-
-function ChoiceRow<T extends string | number>({ id, title, description, choices, value, onChange }: ChoiceRowProps<T>) {
-  const labelId = `${id}-label`;
-
-  return (
-    <CardHeader id={id}>
-      <CardTitle id={labelId}>{title}</CardTitle>
-      <CardDescription>{description}</CardDescription>
-      <CardAction className="self-center">
-        <Select items={choices} value={value} onValueChange={(next: T | null) => next !== null && onChange(next)}>
-          <SelectTrigger aria-labelledby={labelId} className="min-w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent align="end">
-            {choices.map((choice) => (
-              <SelectItem key={choice.value} value={choice.value}>
-                {choice.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </CardAction>
-    </CardHeader>
-  );
-}
 
 export function BrowserSection() {
   const { searchEngine, browserCacheClearHours } = useSettings();
@@ -49,7 +15,7 @@ export function BrowserSection() {
   return (
     <SettingsGroup name="browser" title="Browser">
       <Card size="sm">
-        <ChoiceRow
+        <SettingSelect
           id={SETTING_IDS.searchEngine}
           title="Search engine"
           description="Used for searches from the address bar."
@@ -67,7 +33,7 @@ export function BrowserSection() {
             </Button>
           </CardAction>
         </CardHeader>
-        <ChoiceRow
+        <SettingSelect
           id={SETTING_IDS.browserCacheClearing}
           title="Clear cache automatically"
           description="The cache is cleared each time the app starts, and on this schedule while it stays open."

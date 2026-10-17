@@ -4,6 +4,7 @@ export type Theme = "system" | "light" | "dark";
 export type BackgroundStyle = "image" | "dither";
 export const SEARCH_ENGINES = ["google", "duckDuckGo", "bing"] as const;
 export type SearchEngine = (typeof SEARCH_ENGINES)[number];
+export type BrowserCacheClearHours = 0 | 1 | 6 | 24;
 
 export const LOCAL_PROVIDER = "local";
 
@@ -57,7 +58,7 @@ export interface Settings {
   trashRetentionDays: number;
   mediaFolderId: number | null;
   searchEngine: SearchEngine;
-  browserCacheClearHours: number;
+  browserCacheClearHours: BrowserCacheClearHours;
   micDevice: string | null;
   voiceModel: string | null;
   holdToRecord: boolean;

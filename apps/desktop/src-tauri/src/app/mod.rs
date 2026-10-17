@@ -3,7 +3,7 @@ use crate::commands::{
     tab_session, updater, voice, web_search, windows,
 };
 use crate::features::ai::{Engine, LanguageModels};
-use crate::features::browser::{self as browser_view, AppHotkeys};
+use crate::features::browser::AppHotkeys;
 use crate::features::chats::{ChatStore, CREATE_CHATS_TABLE};
 use crate::features::link_preview::LinkPreviews;
 use crate::features::notes::{
@@ -105,7 +105,9 @@ pub fn run() {
             app.manage(Registry::default());
             app.manage(client);
             app.manage(WebSearch::new()?);
-            clear_web_caches(&[app.path().app_local_data_dir()?, browser_view::data_directory(app.handle())?]);
+            if let Err(error) = clear_web_caches(&[app.path().app_local_data_dir()?]) {
+                eprintln!("[storage] couldn't clear the web view cache: {error}");
+            }
             create_main_window(app)?;
             install_tray(app)?;
             let saved = app.state::<SettingsStore>().voice_shortcuts()?;

@@ -1,17 +1,27 @@
+use super::{browser_tab, clear_from_disk, Done};
 use crate::shared::error::Result;
-use tauri::Webview;
+use std::cell::Cell;
+use std::rc::Rc;
+use tauri::AppHandle;
 use webview2_com::ClearBrowsingDataCompletedHandler;
 use webview2_com::Microsoft::Web::WebView2::Win32::{
     ICoreWebView2Profile2, ICoreWebView2_13, COREWEBVIEW2_BROWSING_DATA_KINDS_DISK_CACHE,
 };
 use windows::core::Interface;
 
-pub fn clear_view_cache(view: &Webview) -> Result<()> {
-    view.with_webview(|platform| {
-        let handler = ClearBrowsingDataCompletedHandler::create(Box::new(|cleared| {
-            if let Err(error) = cleared {
-                eprintln!("[browser] couldn't clear the cache: {error}");
-            }
+fn report(done: &Cell<Option<Done>>, cleared: windows::core::Result<()>) {
+    if let Some(done) = done.take() {
+        let _ = done.send(cleared.map_err(|error| error.to_string()));
+    }
+}
+
+pub fn start_clearing(app: &AppHandle, done: Done) -> Result<()> {
+    let Some(view) = browser_tab(app) else { return clear_from_disk(app, done) };
+    view.with_webview(move |platform| {
+        let done = Rc::new(Cell::new(Some(done)));
+        let finished = Rc::clone(&done);
+        let handler = ClearBrowsingDataCompletedHandler::create(Box::new(move |cleared| {
+            report(&finished, cleared);
             Ok(())
         }));
         let started = unsafe {
@@ -23,7 +33,7 @@ pub fn clear_view_cache(view: &Webview) -> Result<()> {
                 .and_then(|profile| profile.ClearBrowsingData(COREWEBVIEW2_BROWSING_DATA_KINDS_DISK_CACHE, &handler))
         };
         if let Err(error) = started {
-            eprintln!("[browser] couldn't clear the cache: {error}");
+            report(&done, Err(error));
         }
     })?;
     Ok(())

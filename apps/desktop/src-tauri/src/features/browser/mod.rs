@@ -1,9 +1,4 @@
-#[cfg(target_os = "linux")]
-mod cache_linux;
-#[cfg(target_os = "macos")]
-mod cache_macos;
-#[cfg(windows)]
-mod cache_windows;
+mod cache;
 mod hotkeys;
 #[cfg(any(target_os = "macos", test))]
 mod macos_key_names;
@@ -18,12 +13,11 @@ mod keys_windows;
 #[cfg(target_os = "linux")]
 mod overlay;
 
+pub use cache::clear_cache;
 pub use hotkeys::{AppHotkeys, Binding};
 
 use crate::shared::error::{Error, Result};
 use crate::shared::web::is_http;
-#[cfg(not(target_os = "macos"))]
-use crate::shared::web_cache::clear_web_caches;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tauri::webview::{NewWindowResponse, PageLoadEvent};
@@ -158,12 +152,6 @@ use keys_macos::forward_app_hotkeys;
 use keys_windows::forward_app_hotkeys;
 #[cfg(target_os = "linux")]
 use overlay::{dock, place};
-#[cfg(target_os = "linux")]
-use cache_linux::clear_view_cache;
-#[cfg(target_os = "macos")]
-pub use cache_macos::clear_cache;
-#[cfg(windows)]
-use cache_windows::clear_view_cache;
 
 #[cfg(not(target_os = "linux"))]
 fn dock(_: &Webview, _: Bounds) -> Result<()> {
@@ -179,7 +167,7 @@ fn place(view: &Webview, bounds: Bounds) -> Result<()> {
     Ok(())
 }
 
-pub fn data_directory(app: &AppHandle) -> Result<PathBuf> {
+fn data_directory(app: &AppHandle) -> Result<PathBuf> {
     Ok(app.path().app_data_dir()?.join(DATA_FOLDER))
 }
 
@@ -250,17 +238,6 @@ pub fn close(window: &Window, tab: u32) -> Result<()> {
         view.close()?;
         focus_app(window)
     })
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn clear_cache(app: &AppHandle) -> Result<()> {
-    match app.webviews().into_values().find(|view| view.label().starts_with(LABEL_PREFIX)) {
-        Some(view) => clear_view_cache(&view),
-        None => {
-            clear_web_caches(&[data_directory(app)?]);
-            Ok(())
-        }
-    }
 }
 
 pub fn close_all(window: &Window) -> Result<()> {

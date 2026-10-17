@@ -44,5 +44,5 @@ pub async fn browser_close_all(window: Window) -> Result<()> {
 
 #[tauri::command]
 pub async fn browser_clear_cache(app: AppHandle) -> Result<()> {
-    browser::clear_cache(&app)
+    browser::clear_cache(&app).await
 }

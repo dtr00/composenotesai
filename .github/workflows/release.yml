@@ -21,7 +21,9 @@ jobs:
     if: github.repository == 'dtr00/composenotesai' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
+      needed: ${{ steps.bump.outputs.needed }}
       sha: ${{ steps.bump.outputs.sha }}
+      version: ${{ steps.bump.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -29,33 +31,18 @@ jobs:
           fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
       - id: bump
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           version=$(bun apps/desktop/scripts/release-version.ts)
-          if [ -n "$version" ]; then
+          if ! git diff --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git commit -am "chore(release): v$version"
             git push origin HEAD:main
           fi
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-  check:
-    needs: bump
-    runs-on: ubuntu-latest
-    outputs:
-      needed: ${{ steps.version.outputs.needed }}
-      version: ${{ steps.version.outputs.version }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.bump.outputs.sha }}
-      - id: version
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' apps/desktop/src-tauri/Cargo.toml | head -1)
-          [ -n "$version" ] || { echo "::error::No version found in apps/desktop/src-tauri/Cargo.toml"; exit 1; }
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           if gh api "repos/$GITHUB_REPOSITORY/releases/tags/v$version" > /dev/null 2>&1; then
             echo "v$version is already released, nothing to do."
             echo "needed=false" >> "$GITHUB_OUTPUT"
@@ -64,8 +51,8 @@ jobs:
           fi
 
   draft:
-    needs: [bump, check]
-    if: needs.check.outputs.needed == 'true'
+    needs: bump
+    if: needs.bump.outputs.needed == 'true'
     runs-on: ubuntu-latest
     outputs:
       id: ${{ steps.draft.outputs.id }}
@@ -73,7 +60,7 @@ jobs:
       - id: draft
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: v${{ needs.check.outputs.version }}
+          TAG: v${{ needs.bump.outputs.version }}
           SHA: ${{ needs.bump.outputs.sha }}
         run: |
           stale=$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq ".[] | select(.draft and .tag_name == \"$TAG\") | .id")
@@ -83,7 +70,7 @@ jobs:
           echo "id=$id" >> "$GITHUB_OUTPUT"
 
   build:
-    needs: [bump, check, draft]
+    needs: [bump, draft]
     strategy:
       fail-fast: false
       matrix:
@@ -129,7 +116,7 @@ jobs:
           tauriScript: bun run tauri
           args: --target ${{ matrix.target }}
           releaseId: ${{ needs.draft.outputs.id }}
-          tagName: v${{ needs.check.outputs.version }}
+          tagName: v${{ needs.bump.outputs.version }}
           releaseDraft: true
           releaseAssetNamePattern: compose-notes-ai-${{ matrix.asset }}[setup][ext]
           updaterJsonPreferNsis: true
