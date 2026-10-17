@@ -1,7 +1,7 @@
 use super::model::{
-    clamp_trash_retention, is_hex_color, is_keybinding, SettingBytes, SettingGroup, Settings, VoiceShortcutSettings,
-    BACKGROUND_BLUR_RANGE, BACKGROUND_OPACITY_RANGE, BACKGROUND_POSITION_RANGE, BACKGROUND_ZOOM_RANGE,
-    CHAT_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE,
+    clamp_trash_retention, is_hex_color, is_keybinding, valid_cache_clear_hours, SettingBytes, SettingGroup, Settings,
+    VoiceShortcutSettings, BACKGROUND_BLUR_RANGE, BACKGROUND_OPACITY_RANGE, BACKGROUND_POSITION_RANGE,
+    BACKGROUND_ZOOM_RANGE, CHAT_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE,
 };
 #[cfg(test)]
 use super::schema::CREATE_SETTINGS_TABLE;
@@ -33,6 +33,7 @@ const SIDEBAR_WIDTH: Key = key("sidebar_width", SettingGroup::General);
 const CONFIRM_NOTE_DELETE: Key = key("confirm_note_delete", SettingGroup::General);
 const MEDIA_FOLDER_ID: Key = key("media_folder_id", SettingGroup::General);
 const SEARCH_ENGINE: Key = key("search_engine", SettingGroup::General);
+const BROWSER_CACHE_CLEAR_HOURS: Key = key("browser_cache_clear_hours", SettingGroup::General);
 const MIC_DEVICE: Key = key("mic_device", SettingGroup::General);
 const VOICE_MODEL: Key = key("voice_model", SettingGroup::General);
 const RECORD_SHORTCUT: Key = key("record_shortcut", SettingGroup::General);
@@ -63,6 +64,7 @@ const KEYS: &[Key] = &[
     CONFIRM_NOTE_DELETE,
     MEDIA_FOLDER_ID,
     SEARCH_ENGINE,
+    BROWSER_CACHE_CLEAR_HOURS,
     MIC_DEVICE,
     VOICE_MODEL,
     RECORD_SHORTCUT,
@@ -225,6 +227,8 @@ impl SettingsStore {
                 .map_or(defaults.trash_retention_days, clamp_trash_retention),
             media_folder_id: get(&conn, MEDIA_FOLDER_ID)?,
             search_engine: get_choice(&conn, SEARCH_ENGINE)?.unwrap_or(defaults.search_engine),
+            browser_cache_clear_hours: get(&conn, BROWSER_CACHE_CLEAR_HOURS)?
+                .map_or(defaults.browser_cache_clear_hours, valid_cache_clear_hours),
             mic_device: get(&conn, MIC_DEVICE)?,
             voice_model: get(&conn, VOICE_MODEL)?,
             hold_to_record: get(&conn, HOLD_TO_RECORD)?.unwrap_or(defaults.hold_to_record),
@@ -274,6 +278,7 @@ impl SettingsStore {
         set(&tx, TRASH_RETENTION_DAYS, settings.trash_retention_days)?;
         set_optional(&tx, MEDIA_FOLDER_ID, settings.media_folder_id)?;
         set_choice(&tx, SEARCH_ENGINE, settings.search_engine)?;
+        set(&tx, BROWSER_CACHE_CLEAR_HOURS, valid_cache_clear_hours(settings.browser_cache_clear_hours.into()))?;
         set_optional(&tx, MIC_DEVICE, settings.mic_device.as_deref())?;
         set_optional(&tx, VOICE_MODEL, settings.voice_model.as_deref())?;
         set(&tx, HOLD_TO_RECORD, settings.hold_to_record)?;
@@ -318,6 +323,7 @@ mod tests {
             trash_retention_days: 7,
             media_folder_id: Some(3),
             search_engine: SearchEngine::Bing,
+            browser_cache_clear_hours: 1,
             mic_device: Some("alsa:default".into()),
             voice_model: Some("small".into()),
             hold_to_record: false,

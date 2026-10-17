@@ -1,3 +1,4 @@
+mod cache;
 mod hotkeys;
 #[cfg(any(target_os = "macos", test))]
 mod macos_key_names;
@@ -12,6 +13,7 @@ mod keys_windows;
 #[cfg(target_os = "linux")]
 mod overlay;
 
+pub use cache::clear_cache;
 pub use hotkeys::{AppHotkeys, Binding};
 
 use crate::shared::error::{Error, Result};
@@ -165,7 +167,7 @@ fn place(view: &Webview, bounds: Bounds) -> Result<()> {
     Ok(())
 }
 
-pub fn data_directory(app: &AppHandle) -> Result<PathBuf> {
+fn data_directory(app: &AppHandle) -> Result<PathBuf> {
     Ok(app.path().app_data_dir()?.join(DATA_FOLDER))
 }
 

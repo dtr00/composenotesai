@@ -18,6 +18,8 @@ export const SETTING_IDS = {
   about: "setting-about",
   attachmentFolder: "setting-attachment-folder",
   searchEngine: "setting-search-engine",
+  browserCache: "setting-browser-cache",
+  browserCacheClearing: "setting-browser-cache-clearing",
   microphone: "setting-microphone",
   recordShortcut: "setting-record-shortcut",
   holdToRecord: "setting-hold-to-record",
@@ -105,6 +107,18 @@ const SETTINGS: SettingEntry[] = [
     path: SETTINGS_PATH,
     id: SETTING_IDS.searchEngine,
     keywords: ["browser", "web", "google", "duckduckgo", "bing", "address bar"],
+  },
+  {
+    label: "Clear browser cache",
+    path: SETTINGS_PATH,
+    id: SETTING_IDS.browserCache,
+    keywords: ["browser", "web", "cache", "storage", "space", "disk"],
+  },
+  {
+    label: "Clear browser cache automatically",
+    path: SETTINGS_PATH,
+    id: SETTING_IDS.browserCacheClearing,
+    keywords: ["browser", "web", "cache", "auto", "clean up", "schedule"],
   },
   { label: "Version", path: SETTINGS_PATH, id: SETTING_IDS.about, keywords: ["about", "app", "update"] },
   {

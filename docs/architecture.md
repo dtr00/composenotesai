@@ -78,7 +78,7 @@ The Tauri app, moved here unchanged from the repository root. Paths inside it ar
 apps/desktop/
 ├── src/                    # React frontend, Feature-Sliced Design
 ├── src-tauri/              # Rust crate, Tauri config, icons, capabilities
-├── scripts/                # dev launcher, Excalidraw font copy, unit and browser tests
+├── scripts/                # dev launcher, Excalidraw font copy, release version bump, unit and browser tests
 ├── public/                 # generated at build time (Excalidraw fonts), ignored by Git
 ├── index.html              # main window entry
 ├── voice-overlay.html      # voice overlay window entry
@@ -162,7 +162,8 @@ magick shot.png -resize 2000x -quality 84 apps/web/public/shots/shot.webp
 
 `.github/workflows/release.yml` publishes the desktop app. It runs on every push to `main` that touches `apps/desktop/`, `bun.lock` or the workflow, and can be started by hand from the Actions tab.
 
-- A release is made only for a new version. The app's version lives only in `apps/desktop/src-tauri/Cargo.toml` (Tauri reads it from there), and the workflow stops if release `v<version>` already exists. To ship, bump that version and merge to `main`.
+- The version is bumped automatically from Conventional Commits. The app's version lives only in `apps/desktop/src-tauri/Cargo.toml` (Tauri reads it from there). If `v<version>` is already tagged, `apps/desktop/scripts/release-version.ts` reads the commits since that tag that touch `apps/desktop/`: a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) bumps the major version, `feat` the minor version, and `fix` or `perf` the patch version. Other types such as `docs`, `chore` or `refactor` make no release. The workflow commits the new version to `main` as `chore(release): v<version>` and releases that commit.
+- A release is made only for a new version: the workflow stops if release `v<version>` already exists. A version bumped by hand that is not tagged yet is released as it is.
 - It creates a draft release, builds macOS (one universal build for Apple Silicon and Intel), Linux and Windows in parallel, and publishes the release only when every build has uploaded. If a build fails, the draft is replaced on the next run, so the latest release is never missing files.
 - Files are uploaded without the version in their names: `compose-notes-ai-macos-universal.dmg`, `compose-notes-ai-windows-x64-setup.exe`, `compose-notes-ai-windows-x64.msi`, `compose-notes-ai-linux-x64.deb` and `compose-notes-ai-linux-x64.AppImage`. The website links to these names, so change both together.
 - macOS builds target macOS 10.15 or later (`minimumSystemVersion`), the oldest version Whisper's C++ code compiles for.

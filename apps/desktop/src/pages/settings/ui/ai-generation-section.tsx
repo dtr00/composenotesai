@@ -7,9 +7,9 @@ import {
 import { updateAiSettings, useSettings } from "../../../entities/settings/model/settings-store";
 import type { AiSettings } from "../../../shared/api/settings";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "../../../shared/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../shared/ui/select";
 import { Switch } from "../../../shared/ui/switch";
 import { SETTING_IDS } from "../model/settings-search";
+import { SettingSelect } from "./setting-select";
 import { SettingSlider } from "./setting-slider";
 import { SettingsGroup } from "./settings-group";
 
@@ -51,33 +51,16 @@ function SelectRow({ id, title, description, setting }: RowProps & { setting: Nu
   const items = choices.some((choice) => choice.value === value)
     ? choices
     : [...choices, { value, label: String(value) }];
-  const labelId = `${id}-label`;
 
   return (
-    <CardHeader id={id}>
-      <CardTitle id={labelId}>{title}</CardTitle>
-      <CardDescription>{description}</CardDescription>
-      <CardAction className="self-center">
-        <Select
-          items={items}
-          value={value}
-          onValueChange={(next: number | null) => {
-            if (next !== null) updateAiSettings({ [setting]: next } satisfies Partial<AiSettings>);
-          }}
-        >
-          <SelectTrigger aria-labelledby={labelId} className="min-w-36">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent align="end">
-            {items.map((choice) => (
-              <SelectItem key={choice.value} value={choice.value}>
-                {choice.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </CardAction>
-    </CardHeader>
+    <SettingSelect
+      id={id}
+      title={title}
+      description={description}
+      choices={items}
+      value={value}
+      onChange={(next) => updateAiSettings({ [setting]: next } satisfies Partial<AiSettings>)}
+    />
   );
 }
 
