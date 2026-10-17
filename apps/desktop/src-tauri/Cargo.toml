@@ -1,0 +1,60 @@
+[package]
+name = "composenotesai"
+version = "1.0.0"
+description = "Lightweight local-first AI notes"
+authors = ["dang"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "composenotesai_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["unstable", "tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+rusqlite = { version = "0.40.2", default-features = false, features = ["bundled", "blob"] }
+zstd = { version = "0.14.0", default-features = false }
+tauri-plugin-updater = "2.13.1"
+serde_json = "1.0.151"
+sysinfo = { version = "0.39.6", default-features = false, features = ["system", "disk"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+tauri-plugin-global-shortcut = "2"
+cpal = { version = "0.18.2", features = ["pulseaudio"] }
+sha2 = "0.11.0"
+whisper-rs = "0.16.0"
+tauri-plugin-single-instance = "2"
+getrandom = "0.3"
+tokio = { version = "1", default-features = false, features = ["macros", "sync", "time"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+ashpd = { version = "0.13", default-features = false, features = ["tokio", "global_shortcuts"] }
+futures-util = { version = "0.3.34", default-features = false }
+gtk = "0.18"
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.39"
+windows = { version = "0.62", features = ["Win32_UI_Input_KeyboardAndMouse"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6"
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "block2", "NSEvent", "NSView", "NSWindow", "NSResponder"] }
+
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

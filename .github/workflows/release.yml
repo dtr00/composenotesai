@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/desktop/**
+      - bun.lock
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    if: github.repository == 'dtr00/composenotesai'
+    runs-on: ubuntu-latest
+    outputs:
+      needed: ${{ steps.version.outputs.needed }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' apps/desktop/src-tauri/Cargo.toml | head -1)
+          [ -n "$version" ] || { echo "::error::No version found in apps/desktop/src-tauri/Cargo.toml"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/v$version" > /dev/null 2>&1; then
+            echo "v$version is already released, nothing to do."
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  draft:
+    needs: check
+    if: needs.check.outputs.needed == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.draft.outputs.id }}
+    steps:
+      - id: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ needs.check.outputs.version }}
+        run: |
+          stale=$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq ".[] | select(.draft and .tag_name == \"$TAG\") | .id")
+          for id in $stale; do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"; done
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases" -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" \
+            -f name="Compose Notes AI $TAG" -F draft=true -F generate_release_notes=true --jq .id)
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: [check, draft]
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runner: macos-latest
+            target: universal-apple-darwin
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+            asset: macos-universal
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            rust-targets: x86_64-unknown-linux-gnu
+            asset: linux-x64
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            rust-targets: x86_64-pc-windows-msvc
+            asset: windows-x64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+          key: ${{ matrix.target }}
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf \
+            libasound2-dev libpulse-dev
+      - run: bun install --frozen-lockfile
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: apps/desktop
+          tauriScript: bun run tauri
+          args: --target ${{ matrix.target }}
+          releaseId: ${{ needs.draft.outputs.id }}
+          tagName: v${{ needs.check.outputs.version }}
+          releaseDraft: true
+          releaseAssetNamePattern: compose-notes-ai-${{ matrix.asset }}[setup][ext]
+          updaterJsonPreferNsis: true
+          retryAttempts: 1
+
+  publish:
+    needs: [draft, build]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE: repos/${{ github.repository }}/releases/${{ needs.draft.outputs.id }}
+    steps:
+      - name: Check that latest.json lists every platform
+        run: |
+          url=$(gh api "$RELEASE" --jq '.assets[] | select(.name == "latest.json") | .url')
+          gh api -H "Accept: application/octet-stream" "$url" > latest.json
+          for platform in darwin-aarch64 darwin-x86_64 linux-x86_64 windows-x86_64; do
+            jq -e --arg platform "$platform" '.platforms[$platform]' latest.json > /dev/null ||
+              { echo "::error::latest.json has no $platform entry. Run the workflow again."; exit 1; }
+          done
+      - run: gh api -X PATCH "$RELEASE" -F draft=false -f make_latest=true

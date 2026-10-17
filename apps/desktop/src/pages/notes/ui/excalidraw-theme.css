@@ -1,0 +1,112 @@
+.excalidraw.excalidraw,
+.excalidraw.excalidraw.theme--dark {
+  --ui-font: var(--font-sans);
+  --default-bg-color: var(--background);
+  --island-bg-color: var(--popover);
+  --color-surface-lowest: var(--background);
+  --color-surface-low: var(--card);
+  --color-surface-mid: var(--muted);
+  --color-surface-high: var(--accent);
+  --color-on-surface: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-darker: var(--primary);
+  --color-primary-darkest: var(--primary);
+  --color-primary-hover: color-mix(in oklch, var(--primary) 90%, var(--foreground));
+  --color-primary-light: var(--accent);
+  --color-primary-light-darker: var(--accent);
+  --color-surface-primary-container: var(--primary);
+  --color-on-primary-container: var(--primary-foreground);
+  --color-selection: var(--primary);
+  --color-brand-hover: var(--ring);
+  --color-brand-active: var(--primary);
+  --color-border-outline: var(--input);
+  --color-border-outline-variant: var(--border);
+  --default-border-color: var(--border);
+  --dialog-border-color: var(--border);
+  --sidebar-border-color: var(--border);
+  --input-bg-color: var(--background);
+  --input-border-color: var(--input);
+  --input-hover-bg-color: var(--accent);
+  --input-label-color: var(--muted-foreground);
+  --button-gray-1: var(--secondary);
+  --button-gray-2: var(--accent);
+  --button-gray-3: var(--muted);
+  --button-hover-bg: var(--accent);
+  --button-active-bg: var(--accent);
+  --button-active-border: var(--primary);
+  --button-destructive-bg-color: color-mix(in oklch, var(--destructive) 15%, var(--background));
+  --button-destructive-color: var(--destructive);
+  --popup-bg-color: var(--popover);
+  --popup-secondary-bg-color: var(--popover);
+  --popup-text-color: var(--popover-foreground);
+  --popup-text-inverted-color: var(--background);
+  --overlay-bg-color: color-mix(in oklch, var(--background) 88%, transparent);
+  --keybinding-color: var(--muted-foreground);
+  --link-color: var(--primary);
+  --select-highlight-color: var(--primary);
+  --focus-highlight-color: var(--ring);
+  --color-disabled: var(--muted-foreground);
+  --color-slider-track: var(--muted);
+  --color-slider-thumb: var(--foreground);
+  --scrollbar-thumb: var(--muted);
+  --scrollbar-thumb-hover: var(--muted-foreground);
+  --color-danger: var(--destructive);
+  --color-danger-text: var(--destructive);
+  --color-warning: var(--warning);
+  --color-text-warning: var(--foreground);
+  --border-radius-md: calc(var(--radius) * 0.8);
+  --border-radius-lg: var(--radius);
+  --color-gray-10: var(--muted);
+  --color-gray-20: var(--border);
+  --color-gray-30: var(--input);
+  --color-gray-40: var(--muted-foreground);
+  --color-gray-50: var(--muted-foreground);
+  --color-gray-60: var(--muted-foreground);
+  --color-gray-70: var(--muted-foreground);
+  --color-gray-80: var(--foreground);
+  --color-gray-85: var(--foreground);
+  --color-gray-90: var(--foreground);
+  --color-gray-100: var(--foreground);
+}
+
+.excalidraw.excalidraw.theme--dark {
+  --color-gray-10: var(--foreground);
+  --color-gray-20: var(--foreground);
+  --color-gray-30: var(--muted-foreground);
+  --color-gray-80: var(--muted);
+  --color-gray-85: var(--card);
+  --color-gray-90: var(--background);
+  --color-gray-100: var(--background);
+}
+
+.excalidraw.excalidraw .default-sidebar-trigger,
+.excalidraw.excalidraw .help-icon,
+.excalidraw.excalidraw .welcome-screen-decor-hint--help,
+.excalidraw.excalidraw .dropdown-menu-item__icon {
+  display: none;
+}
+
+.excalidraw-tooltip {
+  font-family: var(--font-sans);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.excalidraw .context-menu-item.dangerous .context-menu-item__label {
+  color: var(--destructive);
+}
+
+.excalidraw .context-menu-item:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.excalidraw .context-menu-item:hover.dangerous {
+  background: var(--button-destructive-bg-color);
+}
+
+.excalidraw .context-menu-item-separator {
+  border-color: var(--border);
+}

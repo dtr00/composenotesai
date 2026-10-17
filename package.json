@@ -1,0 +1,29 @@
+{
+  "name": "composenotesai",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "web": "bun run --cwd apps/web",
+    "desktop": "bun run --cwd apps/desktop",
+    "dev:desktop": "bun run --cwd apps/desktop tauri:dev",
+    "tauri": "bun run --cwd apps/desktop tauri",
+    "build": "bun run --filter '*' build",
+    "lint": "eslint .",
+    "format": "prettier --write apps/desktop/src apps/desktop/scripts apps/desktop/vite.config.ts apps/web/src apps/web/vite.config.ts eslint.config.js",
+    "format:check": "prettier --check apps/desktop/src apps/desktop/scripts apps/desktop/vite.config.ts apps/web/src apps/web/vite.config.ts eslint.config.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.1"
+  }
+}

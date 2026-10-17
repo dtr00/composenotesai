@@ -1,0 +1,48 @@
+use crate::shared::error::Result;
+use serde::Serialize;
+use std::time::{Duration, Instant};
+use tauri::ipc::Channel;
+use tauri::AppHandle;
+use tauri_plugin_updater::UpdaterExt;
+
+const CHECK_TIMEOUT: Duration = Duration::from_secs(3);
+const PROGRESS_INTERVAL: Duration = Duration::from_millis(50);
+
+#[derive(Clone, Serialize)]
+#[serde(tag = "event", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum UpdateEvent {
+    Started { version: String },
+    Progress { downloaded: u64, total: Option<u64> },
+    Installing,
+}
+
+pub async fn install_update(app: &AppHandle, on_event: &Channel<UpdateEvent>) -> Result<()> {
+    if cfg!(debug_assertions) {
+        return Ok(());
+    }
+    let updater = app.updater_builder().timeout(CHECK_TIMEOUT).build()?;
+    let Some(update) = updater.check().await? else {
+        return Ok(());
+    };
+    send(on_event, UpdateEvent::Started { version: update.version.clone() });
+    let mut downloaded = 0;
+    let mut last_sent = Instant::now();
+    let bytes = update
+        .download(
+            |chunk, total| {
+                downloaded += chunk as u64;
+                if last_sent.elapsed() >= PROGRESS_INTERVAL || Some(downloaded) == total {
+                    last_sent = Instant::now();
+                    send(on_event, UpdateEvent::Progress { downloaded, total });
+                }
+            },
+            || send(on_event, UpdateEvent::Installing),
+        )
+        .await?;
+    update.install(bytes)?;
+    app.restart()
+}
+
+fn send(channel: &Channel<UpdateEvent>, event: UpdateEvent) {
+    let _ = channel.send(event);
+}

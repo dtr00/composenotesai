@@ -1,0 +1,11 @@
+export const SIDEBAR_WIDTH_PX = { min: 200, max: 420, default: 240 };
+export const CHAT_WIDTH_PX = { min: 320, max: 720, default: 400 };
+export const BACKGROUND_BLUR_PX = { min: 0, max: 10 };
+export const BACKGROUND_OPACITY = { min: 0.05, max: 0.25 };
+export const BACKGROUND_ZOOM = { min: 1, max: 3 };
+export const BACKGROUND_CENTER = 0.5;
+export const MAX_TRASH_RETENTION_DAYS = 3650;
+export const AI_TEMPERATURE = { min: 0, max: 2 };
+export const AI_TOP_P = { min: 0.05, max: 1 };
+export const AI_CONTEXT_SIZES = [4096, 8192, 16384, 32768, 65536, 131072];
+export const tokenCount = (count: number) => `${count / 1024}K tokens`;

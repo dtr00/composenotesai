@@ -1,0 +1,5 @@
+pub const CREATE_SETTINGS_TABLE: &str = "
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value ANY NOT NULL
+) STRICT, WITHOUT ROWID;";
