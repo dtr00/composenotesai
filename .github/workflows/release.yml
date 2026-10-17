@@ -60,7 +60,7 @@ jobs:
   build:
     needs: [check, draft]
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - runner: macos-latest

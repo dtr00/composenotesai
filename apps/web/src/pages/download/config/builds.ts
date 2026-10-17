@@ -21,7 +21,7 @@ export const PLATFORMS: PlatformBuilds[] = [
     platform: "macos",
     name: "macOS",
     summary:
-      "Drag the app to Applications. The first time you open it, choose Open Anyway in System Settings, Privacy & Security.",
+      "For macOS 10.15 or later. Drag the app to Applications, and the first time you open it, choose Open Anyway in System Settings, Privacy & Security.",
     builds: [{ label: "Disk image (.dmg)", href: asset("macos-universal.dmg") }],
   },
   {
