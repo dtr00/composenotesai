@@ -28,7 +28,7 @@ Repository skills live under `.agents/skills/` and are grouped by namespace. Use
 - `frontend-*`: React, Vite, TanStack Start, Tailwind CSS and design tokens, shadcn, animation, visual design, UI polish, and frontend performance.
 - `pstack-*`: from Cursor's [pstack](https://github.com/cursor/plugins/tree/main/pstack) plugin by Lauren Tan (MIT), installed as dependencies of `quality-no-comments`: code walkthroughs, design rationale, design sketches, parallel candidates, adversarial review, and debugging principles.
 - `quality-*`: clean code principles, strict code quality reviews, AI slop cleanup, and comment cleanup.
-- `workflow-*`: minimal solutions, test-driven development, and conventional commits.
+- `workflow-*`: minimal solutions, test-driven development, conventional commits, and pull requests (`workflow-pull-request`: description plus before and after images).
 
 Subagents live under `.agents/agents/` and are symlinked into `.claude/agents/` and `.cursor/agents/`. `pstack-comment-sicko` is used by `quality-no-comments`.
 
@@ -93,6 +93,8 @@ Before pushing (steps 1 to 3 run on the changes being pushed, i.e. the diff agai
 3. Run `quality-thermo-nuclear-code-quality-review` and fix its findings. Repeat until it reports clean.
 4. Run `bun run format` (Prettier) and `bun run lint` (ESLint). Fix every lint error.
 5. Commit the fixes following the steps above, then push.
+
+When opening a pull request, follow `workflow-pull-request`: a description of the change plus before and after images, or full written documentation when there is nothing to show.
 
 ## Code architecture
 
