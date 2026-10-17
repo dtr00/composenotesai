@@ -137,7 +137,7 @@ pub fn clamp_trash_retention(days: i64) -> u32 {
     u32::try_from(days.max(0)).unwrap_or(u32::MAX).min(MAX_TRASH_RETENTION_DAYS)
 }
 
-pub fn browser_cache_clear_hours(hours: i64) -> u32 {
+pub fn valid_cache_clear_hours(hours: i64) -> u32 {
     u32::try_from(hours)
         .ok()
         .filter(|hours| BROWSER_CACHE_CLEAR_HOURS.contains(hours))
@@ -164,11 +164,11 @@ mod tests {
     }
 
     #[test]
-    fn browser_cache_clear_hours_fall_back_to_daily() {
-        assert_eq!(browser_cache_clear_hours(0), 0);
-        assert_eq!(browser_cache_clear_hours(6), 6);
-        assert_eq!(browser_cache_clear_hours(5), DEFAULT_BROWSER_CACHE_CLEAR_HOURS);
-        assert_eq!(browser_cache_clear_hours(-1), DEFAULT_BROWSER_CACHE_CLEAR_HOURS);
+    fn cache_clear_hours_fall_back_to_daily() {
+        assert_eq!(valid_cache_clear_hours(0), 0);
+        assert_eq!(valid_cache_clear_hours(6), 6);
+        assert_eq!(valid_cache_clear_hours(5), DEFAULT_BROWSER_CACHE_CLEAR_HOURS);
+        assert_eq!(valid_cache_clear_hours(-1), DEFAULT_BROWSER_CACHE_CLEAR_HOURS);
     }
 
     #[test]

@@ -1,7 +1,7 @@
 use super::model::{
-    browser_cache_clear_hours, clamp_trash_retention, is_hex_color, is_keybinding, SettingBytes, SettingGroup, Settings, VoiceShortcutSettings,
-    BACKGROUND_BLUR_RANGE, BACKGROUND_OPACITY_RANGE, BACKGROUND_POSITION_RANGE, BACKGROUND_ZOOM_RANGE,
-    CHAT_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE,
+    clamp_trash_retention, is_hex_color, is_keybinding, valid_cache_clear_hours, SettingBytes, SettingGroup, Settings,
+    VoiceShortcutSettings, BACKGROUND_BLUR_RANGE, BACKGROUND_OPACITY_RANGE, BACKGROUND_POSITION_RANGE,
+    BACKGROUND_ZOOM_RANGE, CHAT_WIDTH_RANGE, SIDEBAR_WIDTH_RANGE,
 };
 #[cfg(test)]
 use super::schema::CREATE_SETTINGS_TABLE;
@@ -228,7 +228,7 @@ impl SettingsStore {
             media_folder_id: get(&conn, MEDIA_FOLDER_ID)?,
             search_engine: get_choice(&conn, SEARCH_ENGINE)?.unwrap_or(defaults.search_engine),
             browser_cache_clear_hours: get(&conn, BROWSER_CACHE_CLEAR_HOURS)?
-                .map_or(defaults.browser_cache_clear_hours, browser_cache_clear_hours),
+                .map_or(defaults.browser_cache_clear_hours, valid_cache_clear_hours),
             mic_device: get(&conn, MIC_DEVICE)?,
             voice_model: get(&conn, VOICE_MODEL)?,
             hold_to_record: get(&conn, HOLD_TO_RECORD)?.unwrap_or(defaults.hold_to_record),
@@ -278,7 +278,7 @@ impl SettingsStore {
         set(&tx, TRASH_RETENTION_DAYS, settings.trash_retention_days)?;
         set_optional(&tx, MEDIA_FOLDER_ID, settings.media_folder_id)?;
         set_choice(&tx, SEARCH_ENGINE, settings.search_engine)?;
-        set(&tx, BROWSER_CACHE_CLEAR_HOURS, browser_cache_clear_hours(settings.browser_cache_clear_hours.into()))?;
+        set(&tx, BROWSER_CACHE_CLEAR_HOURS, valid_cache_clear_hours(settings.browser_cache_clear_hours.into()))?;
         set_optional(&tx, MIC_DEVICE, settings.mic_device.as_deref())?;
         set_optional(&tx, VOICE_MODEL, settings.voice_model.as_deref())?;
         set(&tx, HOLD_TO_RECORD, settings.hold_to_record)?;
