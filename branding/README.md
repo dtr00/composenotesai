@@ -10,6 +10,7 @@ Source artwork for the Compose Notes AI icon. The SVGs are the masters; everythi
 | `app-icon-maskable.svg` | Full-bleed with the note inside the maskable safe zone, for Android and PWA.                    |
 | `logo-mark.svg`         | The note on its own, transparent, for headers and inline use.                                   |
 | `logo-mark-mono.svg`    | One-color note that follows `currentColor`, for light and dark themes.                          |
+| `og-image.svg`          | 1200x630 link preview: icon, name (as paths) and the site's hero screenshot, embedded.          |
 
 Regenerate the app icons after changing `app-icon.svg`:
 
@@ -19,6 +20,14 @@ bun run tauri icon ../../branding/app-icon-1024.png
 ```
 
 The root `tauri` script runs inside `apps/desktop/`, so the image path is relative to that folder. `tauri icon` also writes `android/` and `ios/` folders and a `64x64.png` in `apps/desktop/src-tauri/icons/`; the app does not ship those, so delete them.
+
+## Link preview
+
+`og-image.svg` embeds copies of `app-icon.svg` and `apps/web/public/shots/hero.webp`, so rebuild it when either changes. Render it with:
+
+```sh
+rsvg-convert -w 1200 -h 630 branding/og-image.svg -o branding/website/og-image.png
+```
 
 ## Website
 
@@ -30,4 +39,6 @@ The root `tauri` script runs inside `apps/desktop/`, so the image path is relati
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/site.webmanifest" />
 <meta name="theme-color" content="#0e0e0e" />
+<meta property="og:image" content="https://www.composenotesai.com/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
 ```

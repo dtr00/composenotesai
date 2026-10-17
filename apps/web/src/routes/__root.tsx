@@ -5,7 +5,7 @@ import appCss from "@/app/styles.css?url";
 import { PageTransition } from "@/app/ui/page-transition";
 import { SiteFooter } from "@/app/ui/site-footer";
 import { SiteHeader } from "@/app/ui/site-header";
-import { APP_NAME } from "@/shared/config/site";
+import { APP_NAME, SITE_URL } from "@/shared/config/site";
 
 const DESCRIPTION =
   "A note-taking app that keeps your notes, and the AI that helps with them, on your own computer. For Linux, Windows and macOS.";
@@ -21,6 +21,12 @@ export const Route = createRootRoute({
       { property: "og:title", content: APP_NAME },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: APP_NAME },
+      { property: "og:image", content: `${SITE_URL}/og-image.png` },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: APP_NAME },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
