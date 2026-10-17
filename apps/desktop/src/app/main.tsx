@@ -11,6 +11,7 @@ import { forwardBrowserHotkeys } from "../features/browser/model/browser-hotkeys
 import { keepBrowsers, startBrowser } from "../features/browser/model/browser-store";
 import { startPanelBackground } from "../features/panel-background/model/background-store";
 import { toggleSidebar } from "../features/sidebar/model/sidebar-store";
+import { watchForUpdates } from "../features/updater/model/update-store";
 import {
   addTab,
   closeActiveTab,
@@ -36,8 +37,7 @@ import { trackShiftHeld } from "../pages/notes/model/shift-preview";
 import { listenForTrashHistory } from "../pages/notes/model/trash-history";
 import { startTreeSelection } from "../pages/notes/model/tree-store";
 import { openSettings, trackReturnPath } from "../pages/settings/model/settings-navigation";
-import { installAvailableUpdate } from "../pages/update/model/update-store";
-import { UpdatePage } from "../pages/update/page";
+import { revealVersionSetting } from "../pages/settings/model/settings-search";
 import { loadMediaConfig } from "../shared/api/notes";
 import { loadSettings } from "../shared/api/settings";
 import { loadTabSession, type SavedTabSession } from "../shared/api/tab-session";
@@ -101,7 +101,10 @@ function openApp(tabSession: SavedTabSession | null) {
   loadNoteList();
   startTabs(tabSession, isMainWindow);
   guardUnsavedClose(saveTabs, { keepOpen: isMainWindow });
-  if (isMainWindow) listenForVoiceNotes();
+  if (isMainWindow) {
+    listenForVoiceNotes();
+    watchForUpdates(revealVersionSetting);
+  }
   startBrowser({ visit: followPage, openTab: openWebTab });
   watchTabs(keepBrowsers);
   trackReturnPath();
@@ -140,15 +143,7 @@ async function start() {
   startSettings(settings);
   void startPanelBackground();
   render(<TitleBar />);
-  const savedTabSession = await tabSession;
-  const open = () => openApp(savedTabSession);
-  if (!(await installAvailableUpdate())) return open();
-  render(
-    <>
-      <TitleBar />
-      <UpdatePage onContinue={open} />
-    </>,
-  );
+  openApp(await tabSession);
 }
 
 start().catch(showStartError);

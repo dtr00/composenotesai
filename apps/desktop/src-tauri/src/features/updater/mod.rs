@@ -5,15 +5,22 @@ use tauri::ipc::Channel;
 use tauri::AppHandle;
 use tauri_plugin_updater::UpdaterExt;
 
-const CHECK_TIMEOUT: Duration = Duration::from_secs(3);
+const CHECK_TIMEOUT: Duration = Duration::from_secs(10);
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(50);
 
 #[derive(Clone, Serialize)]
 #[serde(tag = "event", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum UpdateEvent {
-    Started { version: String },
     Progress { downloaded: u64, total: Option<u64> },
     Installing,
+}
+
+pub async fn check_update(app: &AppHandle) -> Result<Option<String>> {
+    if cfg!(debug_assertions) {
+        return Ok(None);
+    }
+    let updater = app.updater_builder().timeout(CHECK_TIMEOUT).build()?;
+    Ok(updater.check().await?.map(|update| update.version))
 }
 
 pub async fn install_update(app: &AppHandle, on_event: &Channel<UpdateEvent>) -> Result<()> {
@@ -24,7 +31,6 @@ pub async fn install_update(app: &AppHandle, on_event: &Channel<UpdateEvent>) ->
     let Some(update) = updater.check().await? else {
         return Ok(());
     };
-    send(on_event, UpdateEvent::Started { version: update.version.clone() });
     let mut downloaded = 0;
     let mut last_sent = Instant::now();
     let bytes = update

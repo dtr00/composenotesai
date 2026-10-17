@@ -72,6 +72,13 @@ export interface SettingEntry {
   keywords: string[];
 }
 
+const VERSION_SETTING: SettingEntry = {
+  label: "Version",
+  path: SETTINGS_PATH,
+  id: SETTING_IDS.about,
+  keywords: ["about", "app", "update"],
+};
+
 const background = (label: string, id: string, keywords: string[]): SettingEntry => ({
   label,
   path: APPEARANCE_SETTINGS_PATH,
@@ -120,7 +127,7 @@ const SETTINGS: SettingEntry[] = [
     id: SETTING_IDS.browserCacheClearing,
     keywords: ["browser", "web", "cache", "auto", "clean up", "schedule"],
   },
-  { label: "Version", path: SETTINGS_PATH, id: SETTING_IDS.about, keywords: ["about", "app", "update"] },
+  VERSION_SETTING,
   {
     label: "Theme",
     path: APPEARANCE_SETTINGS_PATH,
@@ -380,3 +387,5 @@ export function revealSetting({ id, fallbackId, path }: SettingEntry) {
   stopWaiting = () => waiting.disconnect();
   navigate(path);
 }
+
+export const revealVersionSetting = () => revealSetting(VERSION_SETTING);
