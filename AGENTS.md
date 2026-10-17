@@ -115,7 +115,7 @@ Paths in this section are relative to `apps/desktop/`. Frontend code lives in `s
 - `src-tauri/capabilities/`: permissions granted to the frontend.
 - `src-tauri/icons/`: app icons for every platform.
 - `src-tauri/gen/`, `src-tauri/target/`: generated output; do not edit.
-- `scripts/`: dev launcher, Excalidraw font copy, unit tests (`bun test`) and browser checks.
+- `scripts/`: dev launcher, Excalidraw font copy, release version bump, unit tests (`bun test`) and browser checks.
 
 ### Feature-Sliced Design
 

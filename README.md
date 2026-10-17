@@ -43,4 +43,4 @@ bun run tauri build
 
 Linux produces `.deb` and AppImage packages; Windows and macOS use their default installers.
 
-To publish a release, bump the app version and merge to `main`. See [Releases](docs/architecture.md#releases).
+Releases are automatic: merging desktop changes to `main` bumps the version from the commit messages (Conventional Commits) and publishes the app. See [Releases](docs/architecture.md#releases).

@@ -17,14 +17,38 @@ permissions:
   contents: write
 
 jobs:
+  bump:
+    if: github.repository == 'dtr00/composenotesai' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.bump.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - id: bump
+        run: |
+          version=$(bun apps/desktop/scripts/release-version.ts)
+          if [ -n "$version" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "chore(release): v$version"
+            git push origin HEAD:main
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
   check:
-    if: github.repository == 'dtr00/composenotesai'
+    needs: bump
     runs-on: ubuntu-latest
     outputs:
       needed: ${{ steps.version.outputs.needed }}
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.bump.outputs.sha }}
       - id: version
         env:
           GH_TOKEN: ${{ github.token }}
@@ -40,7 +64,7 @@ jobs:
           fi
 
   draft:
-    needs: check
+    needs: [bump, check]
     if: needs.check.outputs.needed == 'true'
     runs-on: ubuntu-latest
     outputs:
@@ -50,15 +74,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: v${{ needs.check.outputs.version }}
+          SHA: ${{ needs.bump.outputs.sha }}
         run: |
           stale=$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq ".[] | select(.draft and .tag_name == \"$TAG\") | .id")
           for id in $stale; do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"; done
-          id=$(gh api "repos/$GITHUB_REPOSITORY/releases" -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" \
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases" -f tag_name="$TAG" -f target_commitish="$SHA" \
             -f name="Compose Notes AI $TAG" -F draft=true -F generate_release_notes=true --jq .id)
           echo "id=$id" >> "$GITHUB_OUTPUT"
 
   build:
-    needs: [check, draft]
+    needs: [bump, check, draft]
     strategy:
       fail-fast: false
       matrix:
@@ -78,6 +103,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.bump.outputs.sha }}
       - uses: oven-sh/setup-bun@v2
       - uses: dtolnay/rust-toolchain@stable
         with:
