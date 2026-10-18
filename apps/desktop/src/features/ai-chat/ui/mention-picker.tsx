@@ -1,6 +1,6 @@
 import { cn } from "cn";
-import { FileText, Folder } from "lucide-react";
 import type { MentionItem } from "../hooks/use-mentions";
+import { AttachmentIcon } from "./attachment-icon";
 
 interface MentionPickerProps {
   items: MentionItem[];
@@ -19,7 +19,6 @@ export function MentionPicker({ items, highlighted, onPick, onHighlight }: Menti
       className="absolute inset-x-0 bottom-full z-10 mb-1 flex flex-col rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
     >
       {items.map((item, index) => {
-        const Icon = item.kind === "folder" ? Folder : FileText;
         return (
           <div
             key={`${item.kind}-${item.id}`}
@@ -35,7 +34,7 @@ export function MentionPicker({ items, highlighted, onPick, onHighlight }: Menti
               index === highlighted && "bg-accent text-accent-foreground",
             )}
           >
-            <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+            <AttachmentIcon attachment={item} className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate">{item.title}</span>
           </div>
         );

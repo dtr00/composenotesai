@@ -59,7 +59,7 @@ const WEB_LINES = {
 
 const DRAWING_LINES = {
   vision:
-    "- Read Excalidraw drawings with read_note for their labels, layout and connections. When the answer depends on how a drawing looks, such as handwriting, freehand sketches or embedded pictures, call view_drawing to see it. Say when something in the image is hard to make out. Markdown writing tools cannot edit drawings.",
+    "- When the user asks about an Excalidraw drawing's contents, including an open or attached drawing, call view_drawing first, before answering. Do this immediately without asking permission or waiting for the user to request the tool. It returns both the rendered image and the labels, layout and connections, so read_note is not needed first. Say when something in the image is hard to make out. Markdown writing tools cannot edit drawings.",
   text: "- Read Excalidraw drawings with read_note to understand their labels, layout and connections. This model can't see images, so handwriting, freehand strokes and embedded pictures are not visible to you. If a question depends on them, say so and suggest a model that can see images, from [AI settings](settings:ai). Markdown writing tools cannot edit drawings.",
 };
 

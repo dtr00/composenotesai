@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { counted } from "../../../shared/lib/plural";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../shared/ui/collapsible";
 import type { ChatAttachment } from "../model/conversation";
-import { ATTACHMENT_ICONS } from "./attachment-icons";
+import { AttachmentIcon } from "./attachment-icon";
 import { FOLD_CHEVRON, FOLD_ICON, FOLD_TRIGGER } from "./fold-styles";
 
 export function SentAttachments({ attachments }: { attachments: ChatAttachment[] }) {
@@ -22,13 +22,12 @@ export function SentAttachments({ attachments }: { attachments: ChatAttachment[]
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-1 mr-[7px] flex max-w-full flex-col items-end gap-1.5 border-r pr-3">
         {attachments.map((attachment, index) => {
-          const Icon = ATTACHMENT_ICONS[attachment.kind];
           return (
             <span
               key={`${attachment.kind}-${attachment.name}-${index}`}
               className="flex max-w-full items-center gap-1.5 text-muted-foreground"
             >
-              <Icon className={FOLD_ICON} />
+              <AttachmentIcon attachment={attachment} className={FOLD_ICON} />
               <span className="truncate">{attachment.name}</span>
             </span>
           );

@@ -229,7 +229,7 @@ function imageSummary({ image: { width, height }, scale }: DrawingImage) {
 const viewTool: AgentTool = {
   name: "view_drawing",
   description:
-    "Look at an Excalidraw drawing as a rendered image, including handwriting, freehand sketches and embedded pictures, together with its labels and connections. Use it when the answer depends on how the drawing looks.",
+    "Look at an Excalidraw drawing as a rendered image, including handwriting, freehand sketches and embedded pictures, together with its labels and connections. Call this first whenever the user asks about a drawing's contents, including an open or attached drawing. No permission or prior read_note call is needed.",
   parameters: { type: "object", properties: { note_id: NOTE_ID }, required: ["note_id"] },
   edits: false,
   vision: true,
