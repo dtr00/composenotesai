@@ -1,6 +1,7 @@
 import { useSettings } from "../../../entities/settings/model/settings-store";
 import type { SpeechModel } from "../../../shared/api/voice";
 import { Card, CardFooter } from "../../../shared/ui/card";
+import { Separator } from "../../../shared/ui/separator";
 import { SETTING_IDS } from "../model/settings-search";
 import { cancelDownload, chooseModel, downloadModel, removeModel, useVoice } from "../model/voice";
 import { ExternalLink } from "./external-link";
@@ -15,9 +16,10 @@ function ModelRow({ model }: { model: SpeechModel }) {
   const progress = useVoice().downloads[model.id];
 
   return (
-    <li className="flex items-center gap-3 px-(--card-spacing)">
+    <div className="flex items-center gap-3 px-(--card-spacing)">
       <ModelSummary
         name={model.name}
+        recommended={model.id === "small"}
         description={model.description}
         sizeBytes={model.sizeBytes}
         installed={model.installed}
@@ -28,7 +30,7 @@ function ModelRow({ model }: { model: SpeechModel }) {
         onSetDefault={() => chooseModel(model.id)}
         onDelete={() => void removeModel(model.id)}
       />
-    </li>
+    </div>
   );
 }
 
@@ -41,9 +43,12 @@ export function SpeechModelsSection() {
         <p className="px-(--card-spacing) text-xs text-muted-foreground">
           Voice notes are transcribed on this device. A model downloads once and works offline.
         </p>
-        <ul className="flex flex-col gap-3">
-          {models.map((model) => (
-            <ModelRow key={model.id} model={model} />
+        <ul className="flex flex-col gap-(--card-spacing)">
+          {models.map((model, i) => (
+            <li key={model.id} className="flex flex-col gap-(--card-spacing)">
+              {i > 0 && <Separator className="mx-(--card-spacing) data-horizontal:w-auto" />}
+              <ModelRow model={model} />
+            </li>
           ))}
         </ul>
         <CardFooter className="block border-t bg-muted/50 py-(--card-spacing) text-muted-foreground/70">

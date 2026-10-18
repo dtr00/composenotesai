@@ -8,6 +8,7 @@ import { DownloadStatus } from "./download-status";
 
 interface ModelSummaryProps {
   name: string;
+  recommended?: boolean;
   description: string;
   sizeBytes: number;
   installed: boolean;
@@ -52,11 +53,22 @@ function ModelActions({ name, installed, isDefault, onDownload, onSetDefault, on
   );
 }
 
-export function ModelSummary({ name, description, sizeBytes, progress, onCancel, ...actions }: ModelSummaryProps) {
+export function ModelSummary({
+  name,
+  recommended,
+  description,
+  sizeBytes,
+  progress,
+  onCancel,
+  ...actions
+}: ModelSummaryProps) {
   return (
     <>
       <div className="flex min-w-0 flex-col">
-        <span className="truncate text-xs font-medium">{name}</span>
+        <div className="flex items-center gap-2">
+          <span className="truncate text-xs font-medium">{name}</span>
+          {recommended && <Badge variant="secondary">Recommended</Badge>}
+        </div>
         <span className="text-xs text-muted-foreground">{description}</span>
       </div>
       <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">{formatBytes(sizeBytes)}</span>

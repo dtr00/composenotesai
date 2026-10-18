@@ -77,7 +77,7 @@ pub async fn voice_dictation_start(
 pub async fn voice_dictation_stop(app: AppHandle) -> Result<String> {
     let samples = app.state::<Recorder>().stop(Purpose::Dictation)?;
     let model = speech_model(&app.state::<SpeechModels>(), &app.state::<SettingsStore>().load()?)?;
-    tauri::async_runtime::spawn_blocking(move || app.state::<Transcriber>().transcribe(&model, &samples))
+    tauri::async_runtime::spawn_blocking(move || app.state::<Transcriber>().transcribe(&model, &samples, None))
         .await
         .map_err(|_| Error::Message("Transcription stopped unexpectedly.".into()))?
 }

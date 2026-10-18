@@ -7,6 +7,7 @@ import { formatBytes } from "../../../shared/lib/format-bytes";
 import { Button } from "../../../shared/ui/button";
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "../../../shared/ui/card";
 import { Input } from "../../../shared/ui/input";
+import { Separator } from "../../../shared/ui/separator";
 import {
   cancelAiEngineInstall,
   cancelAiModelDownload,
@@ -109,7 +110,7 @@ function ModelRow({ model }: { model: LocalModel }) {
   const chosen = useSettings().ai.model;
   const ref = { provider: LOCAL_PROVIDER, model: model.id };
   return (
-    <li className="flex flex-col gap-2 px-(--card-spacing)">
+    <div className="flex flex-col gap-2 px-(--card-spacing)">
       <div className="flex items-center gap-3">
         <ModelSummary
           name={model.name}
@@ -125,7 +126,7 @@ function ModelRow({ model }: { model: LocalModel }) {
         />
       </div>
       {model.installed && model.vision && <VisionRow model={model} {...model.vision} />}
-    </li>
+    </div>
   );
 }
 
@@ -179,9 +180,12 @@ export function AiDeviceSection() {
         <p className="px-(--card-spacing) text-xs text-muted-foreground">
           Models run privately on this computer. Larger models write better but need more memory.
         </p>
-        <ul className="flex flex-col gap-3">
-          {models.map((model) => (
-            <ModelRow key={model.id} model={model} />
+        <ul className="flex flex-col gap-(--card-spacing)">
+          {models.map((model, i) => (
+            <li key={model.id} className="flex flex-col gap-(--card-spacing)">
+              {i > 0 && <Separator className="mx-(--card-spacing) data-horizontal:w-auto" />}
+              <ModelRow model={model} />
+            </li>
           ))}
         </ul>
         <AddFromLink />

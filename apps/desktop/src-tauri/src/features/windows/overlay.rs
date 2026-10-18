@@ -37,7 +37,8 @@ pub fn build_voice_overlay(app: &AppHandle) -> Result<()> {
         .always_on_top(true)
         .visible_on_all_workspaces(true)
         .skip_taskbar(true)
-        .resizable(false)
+        // GTK ignores programmatic resizing on non-resizable windows.
+        .resizable(cfg!(target_os = "linux"))
         .focused(false)
         .focusable(false)
         .incognito(true);
@@ -61,6 +62,11 @@ pub fn build_voice_overlay(app: &AppHandle) -> Result<()> {
         let _ = shown.show();
         let _ = shown.set_ignore_cursor_events(true);
     })
+}
+
+pub fn resize_voice_overlay(window: &tauri::WebviewWindow, height: f64) -> Result<()> {
+    let (width, gap) = if cfg!(target_os = "macos") { (CARD_WIDTH, 0.0) } else { (CARD_WIDTH + 2.0 * GAP, GAP) };
+    window.set_size(LogicalSize::new(width, height.clamp(1.0, CARD_HEIGHT) + gap))
 }
 
 /// Desktop extensions that restyle or tile windows, such as rounded corners with a
