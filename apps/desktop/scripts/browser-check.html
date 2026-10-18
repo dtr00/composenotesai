@@ -8,6 +8,7 @@
     <pre id="results">Running browser checks...</pre>
     <script type="module">
       const tests = {
+        "media-paste": () => import("./media-paste.browser-test.ts").then((test) => test.testMediaPaste()),
         "ai-drawing": () => import("./ai-drawing.browser-test.ts").then((test) => test.testAiDrawings()),
         "drawing-vision": () => import("./drawing-vision.browser-test.ts").then((test) => test.testDrawingVision()),
         excalidraw: () => import("./excalidraw.browser-test.ts").then((test) => test.testExcalidrawEditor()),

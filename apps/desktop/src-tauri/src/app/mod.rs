@@ -141,6 +141,7 @@ pub fn run() {
             media::create_media,
             media::import_media,
             media::copied_files,
+            media::copied_image,
             media::media_config,
             media::rename_media,
             media::media_links,

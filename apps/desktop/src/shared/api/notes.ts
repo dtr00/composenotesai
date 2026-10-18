@@ -71,6 +71,10 @@ export const createMedia = (bytes: ArrayBuffer, name: string, parentId: number |
 export const importMedia = (path: string, parentId: number | null) =>
   invoke<MediaSummary>("import_media", { path, parentId });
 export const copiedFiles = () => invoke<string[]>("copied_files");
+export async function copiedImage(): Promise<File | null> {
+  const bytes = await invoke<ArrayBuffer>("copied_image");
+  return bytes.byteLength === 0 ? null : new File([bytes], "image.png", { type: "image/png" });
+}
 export const renameMedia = (id: number, name: string) => invoke<string | null>("rename_media", { id, name });
 
 export interface MediaFormat {
