@@ -164,6 +164,7 @@ pub fn run() {
             system::system_usage,
             tab_session::load_tab_session,
             tab_session::save_tab_session,
+            updater::check_update,
             updater::install_update,
             windows::open_window,
             windows::print_page,

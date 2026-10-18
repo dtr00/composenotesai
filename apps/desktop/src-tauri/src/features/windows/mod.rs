@@ -10,6 +10,5 @@ pub use overlay::{
 };
 pub use tray::install_tray;
 pub use window::{
-    app_in_front, create_main_window, is_main_window, keep_main_window_alive, main_window_in_front, open_window,
-    show_main_window,
+    app_in_front, create_main_window, keep_main_window_alive, main_window_in_front, open_window, show_main_window,
 };
