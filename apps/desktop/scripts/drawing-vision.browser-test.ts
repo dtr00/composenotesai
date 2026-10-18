@@ -203,9 +203,9 @@ export async function testDrawingVision() {
       tools(true).includes("view_drawing") && !tools(false).includes("view_drawing"),
       "Only models that can see images are offered view_drawing",
     );
-    const prompt = (vision: boolean) =>
+    const prompt = (vision: boolean, instructions: string | null = null) =>
       systemPrompt({
-        instructions: null,
+        instructions,
         skills: [],
         loadedSkills: [],
         notes: [drawing],
@@ -219,6 +219,13 @@ export async function testDrawingVision() {
     check(
       prompt(true).includes("call view_drawing") && prompt(false).includes("can't see images"),
       "The system prompt tells the model whether it can look at drawings",
+    );
+    const customPrompt = prompt(true, "Custom agent instructions");
+    check(
+      customPrompt.includes("call view_drawing first, before answering") &&
+        customPrompt.includes("without asking permission") &&
+        customPrompt.includes("including an open or attached drawing"),
+      "Drawing questions require an immediate view without permission, even with custom instructions",
     );
 
     const first = await view.run({ note_id: drawing.id }, "first");

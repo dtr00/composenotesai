@@ -203,6 +203,9 @@ export async function testAiDrawings() {
     const { createRoot } = await import("react-dom/client");
     const { flushSync } = await import("react-dom");
     const { ChatEmpty } = await import("../src/features/ai-chat/ui/chat-empty");
+    const { MentionPicker } = await import("../src/features/ai-chat/ui/mention-picker");
+    const { PendingAttachments } = await import("../src/features/ai-chat/ui/pending-attachments");
+    const { SentAttachments } = await import("../src/features/ai-chat/ui/sent-attachments");
     const { refreshModels } = await import("../src/features/ai-chat/model/models-store");
     await refreshModels();
     navigate(notePath(drawing.id));
@@ -210,6 +213,37 @@ export async function testAiDrawings() {
     document.body.append(container);
     const root = createRoot(container);
     try {
+      flushSync(() =>
+        root.render(
+          createElement(MentionPicker, {
+            items: [drawing, markdown, { kind: "folder", id: folder.id, title: folder.name }],
+            highlighted: 0,
+            onPick: () => {},
+            onHighlight: () => {},
+          }),
+        ),
+      );
+      const options = container.querySelectorAll('[role="option"]');
+      check(
+        options.length === 3 &&
+          options[0].querySelector(".lucide-pencil-ruler") !== null &&
+          options[1].querySelector(".lucide-file-text") !== null &&
+          options[2].querySelector(".lucide-folder") !== null,
+        "Attachment suggestions distinguish drawings, Markdown notes and folders",
+      );
+      flushSync(() => {
+        attachEntries([{ kind: "note", id: drawing.id }]);
+        root.render(createElement(PendingAttachments));
+      });
+      check(
+        container.querySelector(".lucide-pencil-ruler") !== null,
+        "Pending drawing attachments use the drawing icon",
+      );
+      const sentAttachments = await takeAttachments();
+      flushSync(() => root.render(createElement(SentAttachments, { attachments: sentAttachments })));
+      const trigger = container.querySelector("button");
+      flushSync(() => trigger?.click());
+      check(container.querySelector(".lucide-pencil-ruler") !== null, "Sent drawing attachments use the drawing icon");
       flushSync(() => root.render(createElement(ChatEmpty)));
       check(
         container.textContent?.includes("Explain this drawing") === true &&
