@@ -5,7 +5,7 @@ use crate::shared::text::collapse_whitespace;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard};
-use whisper_rs::{get_lang_str, FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+use whisper_rs::{get_lang_str, FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters, WhisperState};
 
 const MAX_THREADS: usize = 8;
 const MAX_PREVIEW_THREADS: usize = 4;
@@ -15,17 +15,12 @@ const FULL_AUDIO_CTX: usize = 1500;
 
 struct Loaded {
     path: PathBuf,
-    context: WhisperContext,
+    state: WhisperState,
 }
 
 pub struct Preview {
     pub text: String,
     pub language: Option<&'static str>,
-}
-
-struct PreviewOptions {
-    language: Option<&'static str>,
-    stopped: Arc<AtomicBool>,
 }
 
 #[derive(Default)]
@@ -36,11 +31,11 @@ fn whisper(e: whisper_rs::WhisperError) -> Error {
 }
 
 impl Transcriber {
-    pub fn transcribe(&self, model: &Path, samples: &[f32]) -> Result<String> {
+    pub fn transcribe(&self, model: &Path, samples: &[f32], language: Option<&'static str>) -> Result<String> {
         if samples.len() < MIN_SAMPLES {
             return Err(Error::Message("The recording was too short.".into()));
         }
-        run(self.0.lock(), model, samples, None).map(|preview| preview.text)
+        run(self.0.lock(), model, samples, language, None).map(|preview| preview.text)
     }
 
     pub fn preview(
@@ -50,11 +45,11 @@ impl Transcriber {
         language: Option<&'static str>,
         stopped: Arc<AtomicBool>,
     ) -> Result<Option<Preview>> {
-        if samples.len() < MIN_SAMPLES {
+        if samples.len() < MIN_SAMPLES || stopped.load(Ordering::Relaxed) {
             return Ok(None);
         }
         let Some(loaded) = self.0.try_lock() else { return Ok(None) };
-        run(loaded, model, samples, Some(PreviewOptions { language, stopped })).map(Some)
+        run(loaded, model, samples, language, Some(stopped)).map(Some)
     }
 
     pub fn unload(&self) {
@@ -68,18 +63,23 @@ fn run(
     mut loaded: MutexGuard<'_, Option<Loaded>>,
     model: &Path,
     samples: &[f32],
-    preview: Option<PreviewOptions>,
+    language: Option<&'static str>,
+    stopped: Option<Arc<AtomicBool>>,
 ) -> Result<Preview> {
+    if samples.iter().all(|sample| *sample == 0.0) {
+        return Ok(Preview { text: String::new(), language: None });
+    }
     whisper_rs::install_logging_hooks();
     if loaded.as_ref().is_none_or(|current| current.path != model) {
-        let context =
-            WhisperContext::new_with_params(model, WhisperContextParameters::default()).map_err(whisper)?;
-        *loaded = Some(Loaded { path: model.to_path_buf(), context });
+        let mut parameters = WhisperContextParameters::default();
+        parameters.flash_attn(true);
+        let context = WhisperContext::new_with_params(model, parameters).map_err(whisper)?;
+        let state = context.create_state().map_err(whisper)?;
+        *loaded = Some(Loaded { path: model.to_path_buf(), state });
     }
-    let context = &loaded.as_ref().expect("the model was just loaded").context;
-    let mut state = context.create_state().map_err(whisper)?;
+    let state = &mut loaded.as_mut().expect("the model was just loaded").state;
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-    params.set_language(Some(preview.as_ref().and_then(|preview| preview.language).unwrap_or("auto")));
+    params.set_language(Some(language.unwrap_or("auto")));
     params.set_translate(false);
     params.set_no_context(true);
     params.set_suppress_blank(true);
@@ -88,16 +88,21 @@ fn run(
     params.set_print_progress(false);
     params.set_print_realtime(false);
     params.set_print_timestamps(false);
-    params.set_n_threads(if preview.is_some() { preview_threads() } else { threads() });
-    if let Some(PreviewOptions { stopped, .. }) = &preview {
-        params.set_audio_ctx(audio_ctx(samples.len()));
-        params.set_no_timestamps(true);
+    params.set_n_threads(if stopped.is_some() { preview_threads() } else { threads() });
+    params.set_audio_ctx(audio_ctx(samples.len()));
+    params.set_no_timestamps(samples.len() <= FULL_AUDIO_CTX * SAMPLES_PER_ENCODER_FRAME);
+    if let Some(stopped) = &stopped {
         unsafe {
             params.set_abort_callback(Some(stop_requested));
             params.set_abort_callback_user_data(Arc::as_ptr(stopped).cast_mut().cast());
         }
     }
-    state.full(params, samples).map_err(whisper)?;
+    if let Err(error) = state.full(params, samples) {
+        if stopped.as_ref().is_some_and(|stopped| stopped.load(Ordering::Relaxed)) {
+            return Ok(Preview { text: String::new(), language: get_lang_str(state.full_lang_id_from_state()) });
+        }
+        return Err(whisper(error));
+    }
     let segments = state
         .as_iter()
         .map(|segment| segment.to_str_lossy().map(|text| speech_only(&text)).map_err(whisper))
@@ -107,7 +112,7 @@ fn run(
 }
 
 fn audio_ctx(samples: usize) -> std::ffi::c_int {
-    (samples / SAMPLES_PER_ENCODER_FRAME + AUDIO_CTX_MARGIN).min(FULL_AUDIO_CTX) as std::ffi::c_int
+    (samples.div_ceil(SAMPLES_PER_ENCODER_FRAME) + AUDIO_CTX_MARGIN).min(FULL_AUDIO_CTX) as std::ffi::c_int
 }
 
 unsafe extern "C" fn stop_requested(stopped: *mut std::ffi::c_void) -> bool {
@@ -170,7 +175,7 @@ mod tests {
 
     #[test]
     fn rejects_recordings_that_are_too_short() {
-        let result = Transcriber::default().transcribe(Path::new("missing.bin"), &[0.0; 100]);
+        let result = Transcriber::default().transcribe(Path::new("missing.bin"), &[0.0; 100], None);
         assert!(matches!(result, Err(Error::Message(message)) if message.contains("too short")));
     }
 
@@ -183,7 +188,21 @@ mod tests {
         let busy = transcriber.0.lock();
         assert!(matches!(transcriber.preview(missing, &[0.0; MIN_SAMPLES], None, Arc::clone(&stopped)), Ok(None)));
         drop(busy);
-        assert!(transcriber.preview(missing, &[0.0; MIN_SAMPLES], None, stopped).is_err());
+        assert!(transcriber.preview(missing, &[0.1; MIN_SAMPLES], None, stopped).is_err());
+    }
+
+    #[test]
+    fn stopped_previews_do_not_load_the_model() {
+        let stopped = Arc::new(AtomicBool::new(true));
+        let preview = Transcriber::default().preview(Path::new("missing.bin"), &[0.0; MIN_SAMPLES], None, stopped);
+        assert!(matches!(preview, Ok(None)));
+    }
+
+    #[test]
+    fn audio_context_covers_short_clips_and_caps_at_thirty_seconds() {
+        assert_eq!(audio_ctx(3 * super::super::SAMPLE_RATE as usize), 214);
+        assert_eq!(audio_ctx(3 * super::super::SAMPLE_RATE as usize + 1), 215);
+        assert_eq!(audio_ctx(60 * super::super::SAMPLE_RATE as usize), FULL_AUDIO_CTX as std::ffi::c_int);
     }
 
     #[test]
@@ -191,16 +210,30 @@ mod tests {
     fn transcribes_speech() {
         let model = std::env::var("WHISPER_TEST_MODEL").unwrap();
         let wav = std::env::var("WHISPER_TEST_WAV").unwrap();
-        let text = Transcriber::default().transcribe(Path::new(&model), &wav_samples(&wav)).unwrap();
-        assert!(text.to_lowercase().contains("ask not what your country can do for you"));
+        let samples = wav_samples(&wav);
+        let transcriber = Transcriber::default();
+        for language in [None, Some("en")] {
+            let started = std::time::Instant::now();
+            let text = transcriber.transcribe(Path::new(&model), &samples, language).unwrap();
+            eprintln!("[voice test] language={language:?}, elapsed={:?}, text={text}", started.elapsed());
+            assert!(text.to_lowercase().contains("ask not what your country can do for you"));
+        }
     }
 
     #[test]
-    #[ignore = "needs WHISPER_TEST_MODEL (a ggml file)"]
-    fn silence_transcribes_to_nothing() {
-        let model = std::env::var("WHISPER_TEST_MODEL").unwrap();
+    fn digital_silence_does_not_load_the_model_or_hallucinate_words() {
         let silence = vec![0.0; 3 * super::super::SAMPLE_RATE as usize];
-        assert_eq!(Transcriber::default().transcribe(Path::new(&model), &silence).unwrap(), "");
+        assert_eq!(Transcriber::default().transcribe(Path::new("missing.bin"), &silence, None).unwrap(), "");
+    }
+
+    #[test]
+    #[ignore = "needs WHISPER_TEST_MODEL (a ggml file) and WHISPER_TEST_WAV (16 kHz mono 16-bit)"]
+    fn transcribes_beyond_the_first_thirty_seconds() {
+        let model = std::env::var("WHISPER_TEST_MODEL").unwrap();
+        let samples = wav_samples(&std::env::var("WHISPER_TEST_WAV").unwrap());
+        let repeats = 30 * super::super::SAMPLE_RATE as usize / samples.len() + 1;
+        let text = Transcriber::default().transcribe(Path::new(&model), &samples.repeat(repeats), Some("en")).unwrap();
+        assert_eq!(text.to_lowercase().matches("ask not what your country can do for you").count(), repeats);
     }
 
     #[test]
@@ -210,10 +243,30 @@ mod tests {
         let samples = wav_samples(&std::env::var("WHISPER_TEST_WAV").unwrap());
         let transcriber = Transcriber::default();
         let stopped = Arc::new(AtomicBool::new(false));
-        for _ in 0..3 {
-            assert!(transcriber.preview(Path::new(&model), &samples, None, Arc::clone(&stopped)).unwrap().is_some());
+        for language in [None, Some("en"), Some("en")] {
+            assert!(transcriber.preview(Path::new(&model), &samples, language, Arc::clone(&stopped)).unwrap().is_some());
         }
         stopped.store(true, Ordering::Relaxed);
-        assert!(transcriber.preview(Path::new(&model), &samples, Some("en"), stopped).is_err());
+        assert!(transcriber.preview(Path::new(&model), &samples, Some("en"), stopped).unwrap().is_none());
+    }
+
+    #[test]
+    #[ignore = "needs WHISPER_TEST_MODEL (a ggml file) and WHISPER_TEST_WAV (16 kHz mono 16-bit)"]
+    fn interrupted_preview_keeps_its_language_and_the_decoder_can_be_reused() {
+        let model = std::env::var("WHISPER_TEST_MODEL").unwrap();
+        let samples = wav_samples(&std::env::var("WHISPER_TEST_WAV").unwrap());
+        let transcriber = Transcriber::default();
+        let stopped = Arc::new(AtomicBool::new(false));
+        let cancel = Arc::clone(&stopped);
+        let interrupt = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            cancel.store(true, Ordering::Relaxed);
+        });
+        let preview = transcriber.preview(Path::new(&model), &samples, None, stopped).unwrap().unwrap();
+        interrupt.join().unwrap();
+        assert_eq!(preview.language, Some("en"));
+        assert!(preview.text.is_empty());
+        let text = transcriber.transcribe(Path::new(&model), &samples, preview.language).unwrap();
+        assert!(text.to_lowercase().contains("ask not what your country can do for you"));
     }
 }

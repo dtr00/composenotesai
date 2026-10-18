@@ -8,6 +8,7 @@ use crate::shared::platform;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::thread::JoinHandle;
 use std::time::Duration;
 use tauri::{AppHandle, Manager};
 
@@ -20,11 +21,23 @@ pub struct Recording {
     pub model: PathBuf,
     pub folder: Option<i64>,
     preview_stopped: Arc<AtomicBool>,
+    preview: Option<JoinHandle<Option<&'static str>>>,
 }
 
 impl Recording {
     pub fn new(session: u64, hold: bool, model: PathBuf, folder: Option<i64>) -> Self {
-        Self { session, hold, model, folder, preview_stopped: Arc::new(AtomicBool::new(false)) }
+        Self {
+            session,
+            hold,
+            model,
+            folder,
+            preview_stopped: Arc::new(AtomicBool::new(false)),
+            preview: None,
+        }
+    }
+
+    pub fn finish_preview(&mut self) -> Option<&'static str> {
+        self.preview.take().and_then(|preview| preview.join().ok()).flatten()
     }
 }
 
@@ -78,17 +91,23 @@ impl VoiceNote {
     }
 }
 
-pub fn preview_while_recording(app: AppHandle, recording: &Recording, show: impl Fn(String) + Send + 'static) {
+pub fn preview_while_recording(app: AppHandle, recording: &mut Recording, show: impl Fn(String) + Send + 'static) {
     let (model, stopped) = (recording.model.clone(), Arc::clone(&recording.preview_stopped));
-    std::thread::spawn(move || {
+    recording.preview = Some(std::thread::spawn(move || {
         platform::lower_thread_priority();
         let mut live = LiveTranscript::default();
         let mut language = None;
         while !stopped.load(Ordering::Relaxed) {
             std::thread::sleep(PREVIEW_GAP);
+            if stopped.load(Ordering::Relaxed) {
+                return language;
+            }
             let Some(samples) = app.state::<Recorder>().since(Purpose::VoiceNote, live.chunk_start()) else {
-                return;
+                return language;
             };
+            if language.is_none() && samples.len() < LANGUAGE_SAMPLES {
+                continue;
+            }
             let preview = match app.state::<Transcriber>().preview(&model, &samples, language, Arc::clone(&stopped)) {
                 Ok(Some(preview)) => preview,
                 Ok(None) => continue,
@@ -96,10 +115,10 @@ pub fn preview_while_recording(app: AppHandle, recording: &Recording, show: impl
                     if !stopped.load(Ordering::Relaxed) {
                         eprintln!("[voice] live preview stopped: {error}");
                     }
-                    return;
+                    return language;
                 }
             };
-            if language.is_none() && samples.len() >= LANGUAGE_SAMPLES {
+            if language.is_none() {
                 language = preview.language;
             }
             let shown = live.update(samples.len(), &preview.text);
@@ -107,7 +126,8 @@ pub fn preview_while_recording(app: AppHandle, recording: &Recording, show: impl
                 show(shown);
             }
         }
-    });
+        language
+    }));
 }
 
 #[cfg(test)]
@@ -138,5 +158,14 @@ mod tests {
         let ended = note.end_recording(|recording| recording.hold).unwrap();
         assert!(ended.preview_stopped.load(Ordering::Relaxed));
         assert!(note.end_recording(|_| true).is_none());
+    }
+
+    #[test]
+    fn finishing_returns_the_preview_language_only_for_its_recording() {
+        let mut recording = Recording::new(1, false, PathBuf::new(), None);
+        recording.preview = Some(std::thread::spawn(|| Some("en")));
+        assert_eq!(recording.finish_preview(), Some("en"));
+        assert!(recording.preview.is_none());
+        assert_eq!(Recording::new(2, false, PathBuf::new(), None).finish_preview(), None);
     }
 }

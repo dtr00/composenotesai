@@ -173,6 +173,7 @@ pub fn run() {
             panel_background::save_panel_background,
             panel_background::clear_panel_background,
             voice::voice_note_state,
+            voice::overlay::resize_voice_overlay,
             voice::microphones,
             voice::voice_test_start,
             voice::voice_test_stop,
@@ -244,7 +245,11 @@ fn run_voice_overlay(context: tauri::Context) {
             voice::overlay::relay_from_parent(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![voice::overlay::parent_settings, voice::voice_note_state])
+        .invoke_handler(tauri::generate_handler![
+            voice::overlay::parent_settings,
+            voice::overlay::resize_voice_overlay,
+            voice::voice_note_state,
+        ])
         .run(context)
         .expect("error while running the voice note overlay");
 }

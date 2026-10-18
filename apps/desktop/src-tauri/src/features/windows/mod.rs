@@ -6,7 +6,7 @@ mod window;
 
 pub use overlay::{
     build_voice_overlay, close_voice_overlay, listen_to_parent, read_from_parent, relay_to_overlay,
-    show_voice_overlay, OverlayProcess, OVERLAY_PROCESS_ARG,
+    resize_voice_overlay, show_voice_overlay, OverlayProcess, OVERLAY_PROCESS_ARG,
 };
 pub use tray::install_tray;
 pub use window::{

@@ -77,6 +77,8 @@ export const cancelDictation = () => invoke<void>("voice_dictation_cancel");
 
 export const loadVoiceNote = () => invoke<VoiceNoteState>("voice_note_state");
 
+export const resizeVoiceOverlay = (height: number) => invoke<void>("resize_voice_overlay", { height });
+
 export const onVoiceStatus = (handler: (status: VoiceStatus) => void) =>
   listen<VoiceStatus>("voice-status", ({ payload }) => handler(payload));
 

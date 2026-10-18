@@ -22,3 +22,8 @@ pub fn relay_from_parent(app: AppHandle) {
 pub fn parent_settings(settings: State<ParentSettings>) -> Settings {
     settings.0.clone()
 }
+
+#[tauri::command]
+pub fn resize_voice_overlay(window: tauri::WebviewWindow, height: f64) -> tauri::Result<()> {
+    windows::resize_voice_overlay(&window, height)
+}

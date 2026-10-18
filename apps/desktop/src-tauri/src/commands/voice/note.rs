@@ -9,7 +9,6 @@ use crate::features::voice::{
 use crate::features::voice_shortcuts::{self, Binding, ShortcutEvent};
 use crate::features::windows;
 use crate::shared::error::{Error, Result};
-use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
@@ -52,13 +51,14 @@ fn announce_level(app: &AppHandle, session: u64) -> Level {
     })
 }
 
-fn save_voice_note(app: &AppHandle, model: &Path, folder: Option<i64>, samples: &[f32]) -> Result<NoteSummary> {
-    let text = app.state::<Transcriber>().transcribe(model, samples)?;
+fn save_voice_note(app: &AppHandle, recording: &mut Recording, samples: &[f32]) -> Result<NoteSummary> {
+    let language = recording.finish_preview();
+    let text = app.state::<Transcriber>().transcribe(&recording.model, samples, language)?;
     if text.is_empty() {
         return Err(Error::Message("No speech was detected.".into()));
     }
     let notes = app.state::<NoteStore>();
-    let note = match notes.create(folder, Some(VOICE_NOTE_TITLE)) {
+    let note = match notes.create(recording.folder, Some(VOICE_NOTE_TITLE)) {
         Err(Error::NotFound(..)) => notes.create(None, Some(VOICE_NOTE_TITLE))?,
         created => created?,
     };
@@ -66,9 +66,9 @@ fn save_voice_note(app: &AppHandle, model: &Path, folder: Option<i64>, samples: 
     Ok(note)
 }
 
-fn transcribe_in_background(app: AppHandle, recording: Recording, samples: Vec<f32>) {
+fn transcribe_in_background(app: AppHandle, mut recording: Recording, samples: Vec<f32>) {
     std::thread::spawn(move || {
-        let status = match save_voice_note(&app, &recording.model, recording.folder, &samples) {
+        let status = match save_voice_note(&app, &mut recording, &samples) {
             Ok(note) => {
                 let _ = app.emit(SAVED_EVENT, note.id);
                 VoiceStatus::Saved { id: note.id, title: note.title }
@@ -90,9 +90,9 @@ fn start_recording(app: &AppHandle, session: u64) -> Result<()> {
     let level = announce_level(app, session);
     app.state::<Recorder>().start(Purpose::VoiceNote, settings.mic_device.clone(), Some(level))?;
     let hold = settings.hold_to_record;
-    let recording = Recording::new(session, hold, model, settings.voice_folder_id);
+    let mut recording = Recording::new(session, hold, model, settings.voice_folder_id);
     let preview = app.clone();
-    preview_while_recording(app.clone(), &recording, move |text| {
+    preview_while_recording(app.clone(), &mut recording, move |text| {
         emit(&preview, session, VoiceEvent::Preview(text));
     });
     app.state::<VoiceNote>().record(recording);

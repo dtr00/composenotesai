@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "../../../shared/ui/select";
 import { Switch } from "../../../shared/ui/switch";
+import { Separator } from "../../../shared/ui/separator";
 import { SETTING_IDS } from "../model/settings-search";
 import { SettingsGroup } from "./settings-group";
 
@@ -137,8 +138,10 @@ export function AiChatSection() {
     <SettingsGroup name="ai-chat" title="Chat">
       <Card size="sm">
         <ModelRow />
+        <Separator className="mx-(--card-spacing) data-horizontal:w-auto" />
         <EditsRow />
         <WebSearchRow />
+        <Separator className="mx-(--card-spacing) data-horizontal:w-auto" />
         <PageLink
           id={SETTING_IDS.aiSkills}
           href={SKILLS_SETTINGS_PATH}
