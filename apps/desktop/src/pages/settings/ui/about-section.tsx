@@ -1,30 +1,29 @@
-import { toast } from "sonner";
-import { checkForUpdate, installAvailableUpdate, useUpdate } from "../../../features/updater/model/update-store";
-import { reportAction } from "../../../shared/lib/error-toast";
+import { checkForUpdateNow, installAvailableUpdate, useUpdate } from "../../../features/updater/model/update-store";
+import type { UpdateEvent } from "../../../shared/api/updater";
 import { Button } from "../../../shared/ui/button";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "../../../shared/ui/card";
 import { useAppInfo } from "../model/app-info";
 import { SETTING_IDS } from "../model/settings-search";
 import { SettingsGroup } from "./settings-group";
 
-async function checkNow() {
-  if ((await reportAction(checkForUpdate())) === null) toast.success("You have the latest version");
+function installLabel(install: UpdateEvent) {
+  if (install.event === "installing") return "Installing";
+  if (!install.total) return "Downloading";
+  return `Downloading ${Math.round((install.downloaded / install.total) * 100)}%`;
 }
 
 function UpdateButton() {
-  const { available, checking, updating, downloaded, total, installing } = useUpdate();
+  const { available, checking, install } = useUpdate();
 
-  if (updating) {
-    const percent = total ? Math.round((downloaded / total) * 100) : null;
+  if (install)
     return (
       <Button variant="outline" className="tabular-nums" disabled>
-        {installing ? "Installing" : percent === null ? "Downloading" : `Downloading ${percent}%`}
+        {installLabel(install)}
       </Button>
     );
-  }
   if (available) return <Button onClick={() => void installAvailableUpdate()}>Update to {available}</Button>;
   return (
-    <Button variant="outline" disabled={checking} onClick={() => void checkNow()}>
+    <Button variant="outline" disabled={checking} onClick={() => void checkForUpdateNow()}>
       {checking ? "Checking" : "Check for updates"}
     </Button>
   );

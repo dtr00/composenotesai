@@ -31,10 +31,6 @@ pub fn create_main_window<R: Runtime, M: Manager<R>>(manager: &M) -> Result<Webv
     create_window(manager, MAIN_WINDOW, WebviewUrl::default())
 }
 
-pub fn is_main_window<R: Runtime>(window: &WebviewWindow<R>) -> bool {
-    window.label() == MAIN_WINDOW
-}
-
 pub fn open_window<R: Runtime, M: Manager<R>>(manager: &M, path: &str) -> Result<WebviewWindow<R>> {
     let label = format!("{WINDOW_LABEL_PREFIX}{}", NEXT_WINDOW.fetch_add(1, Ordering::Relaxed));
     create_window(manager, &label, WebviewUrl::App(format!("#{path}").into()))

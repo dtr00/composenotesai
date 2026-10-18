@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { checkUpdate, installUpdate } from "../../../shared/api/updater";
+import { checkUpdate, installUpdate, type UpdateEvent } from "../../../shared/api/updater";
 import { showError } from "../../../shared/lib/error-toast";
 import { createStore, updateStore, useStore } from "../../../shared/lib/store";
 
@@ -9,41 +9,37 @@ const AVAILABLE_TOAST_ID = "update-available";
 interface UpdateState {
   available: string | null;
   checking: boolean;
-  updating: boolean;
-  downloaded: number;
-  total: number | null;
-  installing: boolean;
+  install: UpdateEvent | null;
 }
 
-const store = createStore<UpdateState>({
-  available: null,
-  checking: false,
-  updating: false,
-  downloaded: 0,
-  total: null,
-  installing: false,
-});
+const store = createStore<UpdateState>({ available: null, checking: false, install: null });
 
 export const useUpdate = () => useStore(store);
 
-export async function checkForUpdate(): Promise<string | null> {
+async function checkForUpdate() {
   updateStore(store, { checking: true });
   try {
-    const available = await checkUpdate();
-    updateStore(store, { available });
-    return available;
+    updateStore(store, { available: await checkUpdate() });
   } finally {
     updateStore(store, { checking: false });
   }
 }
 
+export async function checkForUpdateNow() {
+  try {
+    await checkForUpdate();
+    if (!store.get().available) toast.success("You have the latest version");
+  } catch (e) {
+    showError(e);
+  }
+}
+
 export function watchForUpdates(openSettings: () => void) {
-  let notified: string | null = null;
   const check = async () => {
-    if (store.get().updating) return;
-    const available = await checkForUpdate().catch(() => null);
-    if (!available || available === notified) return;
-    notified = available;
+    const previous = store.get().available;
+    await checkForUpdate().catch(() => {});
+    const { available } = store.get();
+    if (!available || available === previous) return;
     toast.info(`Version ${available} is available`, {
       id: AVAILABLE_TOAST_ID,
       duration: Infinity,
@@ -56,14 +52,12 @@ export function watchForUpdates(openSettings: () => void) {
 
 export async function installAvailableUpdate() {
   toast.dismiss(AVAILABLE_TOAST_ID);
-  updateStore(store, { updating: true, downloaded: 0, total: null, installing: false });
+  updateStore(store, { install: { event: "progress", downloaded: 0, total: null } });
   try {
-    await installUpdate((message) => {
-      if (message.event === "progress") updateStore(store, { downloaded: message.downloaded, total: message.total });
-      else if (message.event === "installing") updateStore(store, { installing: true });
-    });
+    await installUpdate((install) => updateStore(store, { install }));
+    updateStore(store, { available: null });
   } catch (e) {
     showError(e);
   }
-  updateStore(store, { updating: false });
+  updateStore(store, { install: null });
 }
