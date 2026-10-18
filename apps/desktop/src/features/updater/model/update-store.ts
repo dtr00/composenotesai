@@ -3,7 +3,7 @@ import { checkUpdate, installUpdate, type UpdateEvent } from "../../../shared/ap
 import { showError } from "../../../shared/lib/error-toast";
 import { createStore, updateStore, useStore } from "../../../shared/lib/store";
 
-const CHECK_INTERVAL_MS = 15 * 60 * 1000;
+const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const AVAILABLE_TOAST_ID = "update-available";
 
 interface UpdateState {
