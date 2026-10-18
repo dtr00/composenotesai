@@ -55,42 +55,51 @@ function SegmentedBar({ areas, total }: { areas: StorageArea[]; total: number })
   );
 }
 
-function StorageChart({ areas }: { areas: StorageArea[] }) {
+function StorageOverview({ areas, folder }: { areas: StorageArea[]; folder: string }) {
   const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
   const visibleAreas = areas.filter((area) => !hiddenKeys.includes(area.key));
   const total = visibleAreas.reduce((sum, area) => sum + area.bytes, 0);
 
   return (
-    <div className="flex flex-col gap-3 px-(--card-spacing)">
-      <SegmentedBar areas={visibleAreas} total={total} />
-      <p role="status" className="text-xs text-muted-foreground">
-        {visibleAreas.length === 0 ? "No categories selected." : `${formatBytes(total)} shown.`} Select categories to
-        filter the bar.
-      </p>
-      <ToggleGroup
-        multiple
-        aria-label="Storage categories shown in the bar"
-        value={visibleAreas.map((area) => area.key)}
-        onValueChange={(keys) =>
-          setHiddenKeys(areas.filter((area) => !keys.includes(area.key)).map((area) => area.key))
-        }
-        className="grid w-full grid-cols-2 gap-x-6 gap-y-1.5"
-      >
-        {areas.map((area) => (
-          <ToggleGroupItem
-            key={area.key}
-            value={area.key}
-            className="min-w-0 justify-start gap-2 aria-[pressed=false]:opacity-50"
-          >
-            <span aria-hidden className={cn("size-2 shrink-0 rounded-full", area.fill)} />
-            <span className="truncate group-aria-[pressed=false]/toggle:line-through">{area.label}</span>
-            <span className="ml-auto">
-              <Size bytes={area.bytes} />
-            </span>
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-    </div>
+    <Card id={SETTING_IDS.storage} size="sm">
+      <CardHeader>
+        <CardTitle>App and data</CardTitle>
+        <CardDescription className="truncate select-text">{folder}</CardDescription>
+        <CardAction className="self-center">
+          <span className="text-sm font-medium">{formatBytes(total)}</span>
+        </CardAction>
+      </CardHeader>
+      <div className="flex flex-col gap-3 px-(--card-spacing)">
+        <SegmentedBar areas={visibleAreas} total={total} />
+        <p role="status" className="text-xs text-muted-foreground">
+          {visibleAreas.length === 0 ? "No categories selected." : `${formatBytes(total)} shown.`} Select categories to
+          filter the bar.
+        </p>
+        <ToggleGroup
+          multiple
+          aria-label="Storage categories shown in the bar"
+          value={visibleAreas.map((area) => area.key)}
+          onValueChange={(keys) =>
+            setHiddenKeys(areas.filter((area) => !keys.includes(area.key)).map((area) => area.key))
+          }
+          className="grid w-full grid-cols-2 gap-x-6 gap-y-1.5"
+        >
+          {areas.map((area) => (
+            <ToggleGroupItem
+              key={area.key}
+              value={area.key}
+              className="min-w-0 justify-start gap-2 aria-[pressed=false]:opacity-50"
+            >
+              <span aria-hidden className={cn("size-2 shrink-0 rounded-full", area.fill)} />
+              <span className="truncate group-aria-[pressed=false]/toggle:line-through">{area.label}</span>
+              <span className="ml-auto">
+                <Size bytes={area.bytes} />
+              </span>
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </div>
+    </Card>
   );
 }
 
@@ -206,7 +215,6 @@ export function StorageSection() {
   const { usage, loading } = useStorageUsage();
   useMountEffect(refreshStorageUsage);
   const areas = usage ? storageAreas(usage, import.meta.env.DEV) : [];
-  const total = areas.reduce((sum, area) => sum + area.bytes, 0);
 
   return (
     <>
@@ -219,18 +227,7 @@ export function StorageSection() {
           </Button>
         }
       >
-        {usage && (
-          <Card id={SETTING_IDS.storage} size="sm">
-            <CardHeader>
-              <CardTitle>App and data</CardTitle>
-              <CardDescription className="truncate select-text">{usage.folder}</CardDescription>
-              <CardAction className="self-center">
-                <span className="text-sm font-medium">{formatBytes(total)}</span>
-              </CardAction>
-            </CardHeader>
-            <StorageChart areas={areas} />
-          </Card>
-        )}
+        {usage && <StorageOverview areas={areas} folder={usage.folder} />}
       </SettingsGroup>
       <TrashSummary />
       {areas.map((area) => (
