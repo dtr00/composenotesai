@@ -13,6 +13,7 @@
         excalidraw: () => import("./excalidraw.browser-test.ts").then((test) => test.testExcalidrawEditor()),
         "new-tab": () => import("./new-tab.browser-test.ts").then((test) => test.testNewTabActions()),
         "note-navigation": () => import("./note-navigation.browser-test.ts").then((test) => test.testNoteNavigation()),
+        "storage-usage": () => import("./storage-usage.browser-test.ts").then((test) => test.testStorageUsage()),
       };
       const results = document.getElementById("results");
       const name = new URLSearchParams(location.search).get("test");

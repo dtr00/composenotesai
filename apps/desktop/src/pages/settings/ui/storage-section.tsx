@@ -1,11 +1,13 @@
 import { cn } from "cn";
 import { Link } from "../../../shared/ui/link";
 import { TriangleAlert } from "lucide-react";
+import { useState } from "react";
 import { useMountEffect } from "../../../shared/hooks/use-mount-effect";
 import { formatBytes } from "../../../shared/lib/format-bytes";
 import { Button } from "../../../shared/ui/button";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "../../../shared/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/ui/popover";
+import { ToggleGroup, ToggleGroupItem } from "../../../shared/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../shared/ui/tooltip";
 import { SETTING_IDS } from "../model/settings-search";
 import { modelGroups, storageAreas, type ModelGroup, type StorageArea } from "../model/storage-areas";
@@ -31,7 +33,11 @@ function Size({ bytes }: { bytes: number }) {
 
 function SegmentedBar({ areas, total }: { areas: StorageArea[]; total: number }) {
   return (
-    <div className="flex h-2 w-full gap-0.5 overflow-hidden rounded-full" role="img" aria-label="Storage by area">
+    <div
+      className="flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-muted"
+      role="img"
+      aria-label={`Storage by area: ${formatBytes(total)} shown`}
+    >
       {areas.map((area) => (
         <Tooltip key={area.key} trackCursorAxis="x">
           <TooltipTrigger
@@ -49,19 +55,42 @@ function SegmentedBar({ areas, total }: { areas: StorageArea[]; total: number })
   );
 }
 
-function Legend({ areas }: { areas: StorageArea[] }) {
+function StorageChart({ areas }: { areas: StorageArea[] }) {
+  const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
+  const visibleAreas = areas.filter((area) => !hiddenKeys.includes(area.key));
+  const total = visibleAreas.reduce((sum, area) => sum + area.bytes, 0);
+
   return (
-    <ul className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-      {areas.map((area) => (
-        <li key={area.key} className="flex items-center gap-2 text-xs">
-          <span aria-hidden className={cn("size-2 shrink-0 rounded-full", area.fill)} />
-          <span className="truncate">{area.label}</span>
-          <span className="ml-auto">
-            <Size bytes={area.bytes} />
-          </span>
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-col gap-3 px-(--card-spacing)">
+      <SegmentedBar areas={visibleAreas} total={total} />
+      <p role="status" className="text-xs text-muted-foreground">
+        {visibleAreas.length === 0 ? "No categories selected." : `${formatBytes(total)} shown.`} Select categories to
+        filter the bar.
+      </p>
+      <ToggleGroup
+        multiple
+        aria-label="Storage categories shown in the bar"
+        value={visibleAreas.map((area) => area.key)}
+        onValueChange={(keys) =>
+          setHiddenKeys(areas.filter((area) => !keys.includes(area.key)).map((area) => area.key))
+        }
+        className="grid w-full grid-cols-2 gap-x-6 gap-y-1.5"
+      >
+        {areas.map((area) => (
+          <ToggleGroupItem
+            key={area.key}
+            value={area.key}
+            className="min-w-0 justify-start gap-2 aria-[pressed=false]:opacity-50"
+          >
+            <span aria-hidden className={cn("size-2 shrink-0 rounded-full", area.fill)} />
+            <span className="truncate group-aria-[pressed=false]/toggle:line-through">{area.label}</span>
+            <span className="ml-auto">
+              <Size bytes={area.bytes} />
+            </span>
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </div>
   );
 }
 
@@ -199,10 +228,7 @@ export function StorageSection() {
                 <span className="text-sm font-medium">{formatBytes(total)}</span>
               </CardAction>
             </CardHeader>
-            <div className="flex flex-col gap-3 px-(--card-spacing)">
-              <SegmentedBar areas={areas} total={total} />
-              <Legend areas={areas} />
-            </div>
+            <StorageChart areas={areas} />
           </Card>
         )}
       </SettingsGroup>
