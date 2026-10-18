@@ -48,6 +48,7 @@ export async function testStorageUsage() {
   const root = createRoot(container);
   const toggles = () => Array.from(container.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"));
   const bar = () => container.querySelector('[role="img"]');
+  const headlineTotal = () => container.querySelector('[data-slot="card-action"]')?.textContent;
   const toggle = (label: string) => {
     const button = toggles().find((item) => item.textContent?.includes(label));
     if (!button) throw new Error(`Missing category: ${label}`);
@@ -58,7 +59,7 @@ export async function testStorageUsage() {
     flushSync(() => root.render(createElement(StorageSection)));
     await waitFor(() => toggles().length === 6);
     check(bar()?.children.length === 6, "All storage categories are shown by default");
-    const fullTotal = container.querySelector('[data-slot="card-action"]')?.textContent;
+    const fullTotal = headlineTotal();
     const notesWidth = bar()?.children[1]?.getBoundingClientRect().width ?? 0;
     const app = toggle("Application");
     check(app.getAttribute("aria-pressed") === "false", "A hidden category is announced as unpressed");
@@ -68,9 +69,8 @@ export async function testStorageUsage() {
       "The bar rescales so smaller categories become visible",
     );
     check(
-      container.querySelector('[data-slot="card-action"]')?.textContent === fullTotal &&
-        container.textContent?.includes("180.9 KB shown."),
-      "Filtering updates the shown subtotal and keeps the full app size",
+      headlineTotal() === "180.9 KB" && container.textContent?.includes("180.9 KB shown."),
+      "Filtering updates both the headline total and shown subtotal",
     );
     check(container.querySelector("#storage-app-heading") !== null, "Hidden categories retain their storage details");
     const refresh = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Refresh");
@@ -78,23 +78,31 @@ export async function testStorageUsage() {
     const requests = commands.length;
     flushSync(() => refresh.click());
     await waitFor(() => commands.length > requests && !refresh.disabled);
-    check(app.getAttribute("aria-pressed") === "false" && bar()?.children.length === 5, "Refresh preserves the filter");
+    check(
+      app.getAttribute("aria-pressed") === "false" && bar()?.children.length === 5 && headlineTotal() === "180.9 KB",
+      "Refresh preserves the filter and selected total",
+    );
     for (const button of toggles().filter((item) => item.getAttribute("aria-pressed") === "true")) {
       flushSync(() => button.click());
     }
     check(
-      bar()?.children.length === 0 && container.textContent?.includes("No categories selected."),
-      "Turning every category off leaves an empty bar with an explanation",
+      bar()?.children.length === 0 &&
+        headlineTotal() === "0 B" &&
+        container.textContent?.includes("No categories selected."),
+      "Turning every category off shows a zero total and an empty bar with an explanation",
     );
     toggle("Notes");
     check(
-      bar()?.children.length === 1 && container.textContent?.includes("6.3 KB shown."),
-      "A single category can be isolated",
+      bar()?.children.length === 1 && headlineTotal() === "6.3 KB" && container.textContent?.includes("6.3 KB shown."),
+      "A single category can be isolated with its matching total",
     );
     for (const button of toggles().filter((item) => item.getAttribute("aria-pressed") === "false")) {
       flushSync(() => button.click());
     }
-    check(bar()?.children.length === 6, "Every category can be restored");
+    check(
+      bar()?.children.length === 6 && headlineTotal() === fullTotal,
+      "Restoring every category restores the full total",
+    );
     check(
       commands.every((command) => ["storage_usage", "list_trash"].includes(command)),
       "Filtering only reads storage data",
