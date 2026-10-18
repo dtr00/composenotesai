@@ -5,7 +5,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const DATABASE_FILE: &str = "notes.db";
 const FULL_AUTO_VACUUM: u32 = 1;
-const WAL_SIZE_LIMIT: i64 = 1 << 20;
+const WAL_SIZE_LIMIT: i64 = 0;
+const WAL_AUTOCHECKPOINT_PAGES: u32 = 32;
 
 pub fn now_ms() -> i64 {
     let since_epoch = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
@@ -46,6 +47,7 @@ pub fn open(path: &Path, migrations: &[Migration]) -> Result<Connection> {
     let conn = Connection::open(path)?;
     conn.pragma_update(None, "journal_mode", "WAL")?;
     conn.pragma_update(None, "journal_size_limit", WAL_SIZE_LIMIT)?;
+    conn.pragma_update(None, "wal_autocheckpoint", WAL_AUTOCHECKPOINT_PAGES)?;
     conn.pragma_update(None, "synchronous", "NORMAL")?;
     migrate(&conn, migrations)?;
     Ok(conn)
@@ -98,6 +100,41 @@ mod tests {
     fn file_pages(conn: &Connection) -> (u32, u32) {
         let pragma = |name| conn.pragma_query_value(None, name, |r| r.get(0)).unwrap();
         (pragma("page_count"), pragma("freelist_count"))
+    }
+
+    #[test]
+    fn repeated_saves_keep_the_write_ahead_log_small_with_multiple_connections() {
+        let dir = crate::shared::testing::temp_dir("db-small-wal");
+        let path = dir.join(DATABASE_FILE);
+        enable_auto_vacuum(&path).unwrap();
+        let connections = [
+            open(&path, &[Migration::Sql("CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT);")]).unwrap(),
+            open(&path, &[]).unwrap(),
+        ];
+        connections[0].execute_batch("INSERT INTO notes VALUES (1, ''), (2, ''), (3, '');").unwrap();
+        let [_, wal, _] = database_files(&dir);
+        let mut peak_wal_bytes = 0;
+        for edit in 0..300 {
+            let body = format!("Saved edit {edit:03}\n").repeat(100);
+            connections[edit % connections.len()]
+                .execute("UPDATE notes SET body = ?1 WHERE id = ?2", rusqlite::params![body, (edit % 3 + 1) as i64])
+                .unwrap();
+            peak_wal_bytes = peak_wal_bytes.max(std::fs::metadata(&wal).unwrap().len());
+        }
+        let database_bytes = logical_bytes(&connections[0]).unwrap();
+        let wal_bytes = std::fs::metadata(&wal).unwrap().len();
+        let last_body: String =
+            connections[0].query_row("SELECT body FROM notes WHERE id = 3", [], |r| r.get(0)).unwrap();
+        drop(connections);
+        let reopened = open(&path, &[]).unwrap();
+        let saved_body: String = reopened.query_row("SELECT body FROM notes WHERE id = 3", [], |r| r.get(0)).unwrap();
+        drop(reopened);
+        std::fs::remove_dir_all(&dir).unwrap();
+
+        eprintln!("300 saves: database={database_bytes} B, WAL={wal_bytes} B, peak WAL={peak_wal_bytes} B");
+        assert_eq!(last_body, "Saved edit 299\n".repeat(100));
+        assert_eq!(saved_body, last_body);
+        assert!(peak_wal_bytes < 256 * 1024, "Peak WAL reached {peak_wal_bytes} bytes");
     }
 
     #[test]
