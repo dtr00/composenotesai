@@ -1,6 +1,6 @@
 [package]
 name = "composenotesai"
-version = "1.2.3"
+version = "1.2.4"
 description = "Lightweight local-first AI notes"
 authors = ["dang"]
 edition = "2021"
