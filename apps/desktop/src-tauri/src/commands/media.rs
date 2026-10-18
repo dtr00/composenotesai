@@ -41,6 +41,16 @@ pub async fn copied_files(app: AppHandle) -> Result<Vec<PathBuf>> {
     receive.recv().map_err(|_| Error::Message("Couldn't read the copied files.".into()))
 }
 
+#[tauri::command]
+pub async fn copied_image(app: AppHandle) -> Result<Response> {
+    let (send, receive) = tokio::sync::oneshot::channel();
+    app.run_on_main_thread(move || {
+        let _ = send.send(clipboard::copied_image());
+    })?;
+    let image = receive.await.map_err(|_| Error::Message("Couldn't read the copied image.".into()))??;
+    Ok(Response::new(image))
+}
+
 pub struct MediaBase(pub String);
 
 #[derive(Serialize)]

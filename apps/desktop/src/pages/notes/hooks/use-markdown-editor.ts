@@ -3,7 +3,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { useCallback, useRef, type KeyboardEvent } from "react";
 import { markdownEditor } from "../../../features/markdown-editor/lib/markdown-editor";
 import { openWebTab } from "../../../features/tabs/model/tabs-store";
-import { copiedFiles } from "../../../shared/api/notes";
+import { copiedFiles, copiedImage } from "../../../shared/api/notes";
 import { aiWriting, isAiEdit } from "../lib/ai-writing";
 import { reportUnreadableMedia, saveMedia } from "../model/note-media";
 import { editNote, latestBody, openNoteByTitle, saveDrafts, type OpenNote } from "../model/notes-store";
@@ -54,7 +54,7 @@ export function useMarkdownEditor(note: OpenNote, labelledBy: string) {
               },
             ]),
             markdownEditor({
-              media: { save: saveMedia, copiedFiles, onUnreadable: reportUnreadableMedia },
+              media: { save: saveMedia, copiedFiles, copiedImage, onUnreadable: reportUnreadableMedia },
               openPageLink: openNoteByTitle,
               openWebLink: openWebTab,
             }),

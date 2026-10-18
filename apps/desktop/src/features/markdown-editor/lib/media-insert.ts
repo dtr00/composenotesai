@@ -13,17 +13,28 @@ const WINDOWS_DRIVE_URL_PATH = /^\/[A-Za-z]:\//;
 
 let nextInsertId = 0;
 
-const trackInsert = StateEffect.define<{ id: number; pos: number }>();
+interface InsertRange {
+  from: number;
+  to: number;
+}
+
+const trackInsert = StateEffect.define<InsertRange & { id: number }>();
 const untrackInsert = StateEffect.define<number>();
 
-const pendingInserts = StateField.define<ReadonlyMap<number, number>>({
+const pendingInserts = StateField.define<ReadonlyMap<number, InsertRange>>({
   create: () => new Map(),
   update(pending, tr) {
     const effects = tr.effects.filter((effect) => effect.is(trackInsert) || effect.is(untrackInsert));
     if ((tr.changes.empty || pending.size === 0) && effects.length === 0) return pending;
-    const next = new Map([...pending].map(([id, pos]) => [id, tr.changes.mapPos(pos, -1)]));
+    const next = new Map(
+      [...pending].map(([id, { from, to }]) => {
+        const start = tr.changes.mapPos(from, -1);
+        const end = tr.changes.touchesRange(from, to) ? start : tr.changes.mapPos(to, -1);
+        return [id, { from: start, to: end }];
+      }),
+    );
     for (const effect of effects) {
-      if (effect.is(trackInsert)) next.set(effect.value.id, effect.value.pos);
+      if (effect.is(trackInsert)) next.set(effect.value.id, effect.value);
       if (effect.is(untrackInsert)) next.delete(effect.value);
     }
     return next;
@@ -63,23 +74,24 @@ function clipboardMedia(data: DataTransfer): MediaSource[] {
 
 function startInsert(view: EditorView, from: number, to: number) {
   const id = nextInsertId++;
-  view.dispatch({ changes: from === to ? [] : { from, to }, effects: trackInsert.of({ id, pos: from }) });
+  view.dispatch({ effects: trackInsert.of({ id, from, to }) });
   return id;
 }
 
 function insertMedia(view: EditorView, id: number, media: MediaSummary) {
-  const pos = view.state.field(pendingInserts).get(id);
-  if (pos === undefined) return false;
+  const range = view.state.field(pendingInserts).get(id);
+  if (!range) return false;
+  const { from: pos, to } = range;
   const { state } = view;
   const line = state.doc.lineAt(pos);
   const before = state.sliceDoc(line.from, pos).trim() === "" ? "" : "\n";
   const insert = `${before}${mediaMarkdown(media)}\n`;
   const end = pos + insert.length;
-  const cursorStayed = state.selection.main.empty && state.selection.main.head === pos;
+  const cursorStayed = state.selection.main.from === pos && state.selection.main.to === to;
   view.dispatch({
-    changes: { from: pos, insert },
+    changes: { from: pos, to, insert },
     selection: cursorStayed ? { anchor: end } : undefined,
-    effects: trackInsert.of({ id, pos: end }),
+    effects: trackInsert.of({ id, from: end, to: end }),
     scrollIntoView: cursorStayed,
     userEvent: "input.paste",
   });
@@ -102,17 +114,29 @@ const holdsMedia = (data: DataTransfer) => [...data.types].some((type) => type =
 export interface MediaHost {
   save: SaveMedia;
   copiedFiles: () => Promise<string[]>;
+  copiedImage: () => Promise<File | null>;
   onUnreadable: () => void;
 }
 
 const hidesCopiedFiles = (data: DataTransfer) =>
   data.types.includes("text/uri-list") && data.getData("text/uri-list") === "";
 
-async function pasteCopiedFiles(view: EditorView, id: number, { save, copiedFiles, onUnreadable }: MediaHost) {
-  const paths = (await copiedFiles().catch(() => [])).filter(isMediaFileName);
-  if (paths.length > 0) return saveAndInsert(view, id, paths, save);
+function holdsHtmlImage(data: DataTransfer) {
+  const html = data.getData("text/html");
+  if (!html) return false;
+  const { body } = new DOMParser().parseFromString(html, "text/html");
+  return body.textContent?.trim() === "" && body.querySelector("img") !== null;
+}
+
+async function pasteNativeMedia(view: EditorView, id: number, data: DataTransfer, paste: MediaHost) {
+  const sources: MediaSource[] = await (
+    hidesCopiedFiles(data)
+      ? paste.copiedFiles().then((paths) => paths.filter(isMediaFileName))
+      : paste.copiedImage().then((image) => (image ? [image] : []))
+  ).catch(() => []);
+  if (sources.length > 0) return saveAndInsert(view, id, sources, paste.save);
   if (view.dom.isConnected) view.dispatch({ effects: untrackInsert.of(id) });
-  onUnreadable();
+  paste.onUnreadable();
 }
 
 export function mediaInsertion(paste: MediaHost) {
@@ -129,14 +153,9 @@ export function mediaInsertion(paste: MediaHost) {
           void saveAndInsert(view, startInsert(view, from, to), sources, paste.save);
           return true;
         }
-        if (hidesCopiedFiles(data)) {
-          event.preventDefault();
-          void pasteCopiedFiles(view, startInsert(view, from, to), paste);
-          return true;
-        }
-        if (!holdsMedia(data)) return false;
+        if (!hidesCopiedFiles(data) && !holdsMedia(data) && !holdsHtmlImage(data)) return false;
         event.preventDefault();
-        paste.onUnreadable();
+        void pasteNativeMedia(view, startInsert(view, from, to), data, paste);
         return true;
       },
     }),
