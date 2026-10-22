@@ -29,8 +29,8 @@ import {
   addTabsToGroup,
   barItems,
   clearTabSelection,
-  closeAllTabs,
   closeOtherTabs,
+  closeScopeTabs,
   closeTab,
   closeTabsById,
   closeTabsToLeft,
@@ -185,7 +185,7 @@ function TabItem({
           Close to the left
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={closeAllTabs}>Close all</ContextMenuItem>
+        <ContextMenuItem onClick={() => closeScopeTabs(tab.id)}>Close all</ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -231,6 +231,11 @@ function TabEntry(props: TabItemProps) {
   }
 }
 
+function scopePosition(tabs: Tab[], tab: Tab) {
+  const scope = tabs.filter((other) => other.groupId === tab.groupId);
+  return { index: scope.indexOf(tab), count: scope.length };
+}
+
 export function TabBar() {
   const { tabs, groups, activeId, selection, renamingGroupId } = useTabs();
   const transition = useReducedTransition(TAB_TRANSITION);
@@ -258,8 +263,7 @@ export function TabBar() {
       >
         <TabEntry
           tab={item.tab}
-          index={tabs.indexOf(item.tab)}
-          count={tabs.length}
+          {...scopePosition(tabs, item.tab)}
           active={item.tab.id === activeId}
           selected={selection.includes(item.tab.id)}
           targets={selection.includes(item.tab.id) ? selection : [item.tab.id]}
