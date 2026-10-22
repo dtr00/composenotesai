@@ -1,6 +1,7 @@
 import { cn } from "cn";
 import { ArrowUp, Square } from "lucide-react";
 import type { KeyboardEvent } from "react";
+import { useCommands } from "../hooks/use-commands";
 import { useComposerDrop } from "../hooks/use-composer-drop";
 import { useCurrentNoteId } from "../hooks/use-current-note";
 import { useMentions } from "../hooks/use-mentions";
@@ -9,6 +10,7 @@ import { sendMessage, setDraft, stopRun, useChatRunning, useDraft } from "../mod
 import { useModelChoice } from "../model/models-store";
 import { useVoiceMessageState } from "../model/voice-message";
 import { AttachMenu } from "./attach-menu";
+import { CommandPicker } from "./command-picker";
 import { IconActionButton } from "./icon-action-button";
 import { MentionPicker } from "./mention-picker";
 import { ModelPicker } from "./model-picker";
@@ -45,6 +47,7 @@ export function ChatComposer() {
   const choice = useModelChoice();
   const [dropping, dropZone] = useComposerDrop();
   const mentions = useMentions(draft, composer);
+  const commands = useCommands(draft);
   const voiceActive = useVoiceMessageState() !== "idle";
   const empty = draft.trim().length === 0;
   const canSend = !empty && choice !== null && !running;
@@ -56,7 +59,7 @@ export function ChatComposer() {
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (mentions.consumeKey(event)) return;
+    if (commands.consumeKey(event) || mentions.consumeKey(event)) return;
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
     send();
@@ -71,6 +74,14 @@ export function ChatComposer() {
           dropping && "border-primary ring-2 ring-primary/30",
         )}
       >
+        {commands.suggestions.length > 0 && (
+          <CommandPicker
+            commands={commands.suggestions}
+            highlighted={commands.highlighted}
+            onPick={commands.pick}
+            onHighlight={commands.setHighlighted}
+          />
+        )}
         {mentions.suggestions.length > 0 && (
           <MentionPicker
             items={mentions.suggestions}

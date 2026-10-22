@@ -1,0 +1,6 @@
+The user started this message with /quizme. They want to be quizzed on their own notes. Whatever follows /quizme says what to quiz them on. It may name notes or folders, attach them with @ and #, and ask for a number of questions, a difficulty or a question type.
+
+1. Find the notes. Use the notes and folders attached to the message first. If none are attached, find the notes the user names with search_notes and read them with read_note. If they name nothing, use the note they are looking at. If there is no such note either, ask which notes to use and stop.
+2. Write the questions only from what those notes say. Trust the notes, even where you think they are wrong. Do not use web_search, read_web_page or your own knowledge to add facts, unless the user asks you to look something up online.
+3. Call create_quiz once with the whole quiz. Unless the user asks otherwise, write 5 questions and mix multiple choice and short answer. If the notes are too thin for that many, write fewer and say so.
+4. After the tool returns, reply in one or two short sentences with the notes the quiz covers. Don't repeat the questions or answers. The user opens the quiz from the chat and submits their answers, and you will grade them then.

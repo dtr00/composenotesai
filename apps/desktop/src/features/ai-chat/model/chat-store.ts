@@ -13,6 +13,8 @@ import { noteIdIn } from "../lib/note-route";
 import { withSavedImages } from "../lib/wire";
 import { readSavedMessages } from "../lib/saved-chat";
 import { matchingSkills } from "../lib/skill-match";
+import { CHAT_COMMANDS } from "../config/chat-commands";
+import { commandIn } from "../lib/chat-command";
 import { agentTools } from "./agent-tools";
 import { dropUnmentioned, restoreAttachments, takeAttachments } from "./attachments";
 import { trustOnlyPagesLinkedFrom } from "./web-tools";
@@ -21,6 +23,7 @@ import {
   messageId,
   type AssistantMessage,
   type AssistantPart,
+  type ChatAttachment,
   type ConversationMessage,
   type UserMessage,
 } from "./conversation";
@@ -48,6 +51,11 @@ export const useChatRunning = () => useSelector(store, (state) => state.running)
 
 export const useChatTitle = (): string | null =>
   useSelector(store, ({ messages, title }) => (messages.length === 0 ? null : (title ?? titleOf(messages))));
+
+export const useQuizSubmitted = (callId: string) =>
+  useSelector(store, ({ messages }) =>
+    messages.some((message) => message.role === "user" && message.quizCallId === callId),
+  );
 
 export const useDraft = () => useStore(draft);
 
@@ -145,7 +153,12 @@ function openNotes(notes: NoteTitle[]) {
   };
 }
 
-export async function sendMessage(text: string) {
+export interface QuizAnswers {
+  callId: string;
+  attachment: ChatAttachment;
+}
+
+export async function sendMessage(text: string, quiz?: QuizAnswers) {
   const prompt = text.trim();
   if (!prompt || isRunning()) return;
   const choice = currentModelChoice();
@@ -154,8 +167,15 @@ export async function sendMessage(text: string) {
     return;
   }
   updateStore(store, { running: true });
-  const attachments = await takeAttachments();
-  const user: UserMessage = { id: messageId(), role: "user", text: prompt, attachments, sentAt: Date.now() };
+  const attachments = quiz ? [quiz.attachment] : await takeAttachments();
+  const user: UserMessage = {
+    id: messageId(),
+    role: "user",
+    text: prompt,
+    attachments,
+    sentAt: Date.now(),
+    quizCallId: quiz?.callId,
+  };
   const assistant: AssistantMessage = {
     id: messageId(),
     role: "assistant",
@@ -188,6 +208,7 @@ export async function sendMessage(text: string) {
         instructions: ai.instructions,
         skills,
         loadedSkills,
+        command: commandIn(prompt, CHAT_COMMANDS),
         notes,
         ...openNotes(notes),
         allowEdits: ai.allowEdits,

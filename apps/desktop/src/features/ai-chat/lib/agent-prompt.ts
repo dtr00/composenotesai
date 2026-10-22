@@ -1,6 +1,7 @@
 import { drawingTag, isDrawing } from "../../../entities/note/lib/note-format";
 import type { SkillSummary } from "../../../shared/api/skills";
 import type { NoteSummary } from "../../../shared/api/notes";
+import type { ChatCommand } from "../config/chat-commands";
 import agentFile from "../config/compose-agent.md?raw";
 
 export const DEFAULT_AGENT_INSTRUCTIONS = agentFile.trim();
@@ -16,6 +17,7 @@ interface PromptContext {
   instructions: string | null;
   skills: SkillSummary[];
   loadedSkills: LoadedSkill[];
+  command: ChatCommand | null;
   notes: NoteTitle[];
   openNote: NoteTitle | null;
   tabNotes: NoteTitle[];
@@ -83,9 +85,21 @@ function loadedSection(skills: LoadedSkill[]): string | null {
   return `## Skills for this request\n\nThese skills match the request. Follow them. You don't need to read them again.\n\n${bodies}`;
 }
 
+const commandSection = (command: ChatCommand | null): string | null =>
+  command &&
+  `## Command: /${command.name}
+
+${command.instructions}`;
+
 export function systemPrompt(context: PromptContext): string {
   const instructions = context.instructions?.trim() || DEFAULT_AGENT_INSTRUCTIONS;
-  return [instructions, skillsSection(context.skills), loadedSection(context.loadedSkills), situation(context)]
+  return [
+    instructions,
+    skillsSection(context.skills),
+    loadedSection(context.loadedSkills),
+    commandSection(context.command),
+    situation(context),
+  ]
     .filter(Boolean)
     .join("\n\n");
 }

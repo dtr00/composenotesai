@@ -4,10 +4,13 @@ import { Bubble, BubbleContent } from "../../../shared/ui/bubble";
 import { snapWithin } from "../../../shared/lib/pixel-snap";
 import { Message, MessageContent, MessageFooter } from "../../../shared/ui/message";
 import { Spinner } from "../../../shared/ui/spinner";
-import type { AssistantMessage } from "../model/conversation";
+import { quizFromArguments, type Quiz } from "../lib/quiz";
+import type { AssistantMessage, ToolPart } from "../model/conversation";
+import { QUIZ_TOOL } from "../model/quiz-tool";
 import { AgentProcess, type ProcessStep } from "./agent-process";
 import { ChatMarkdown } from "./chat-markdown";
 import { CopyButton } from "./copy-button";
+import { QuizCard } from "./quiz-card";
 
 interface Process {
   kind: "process";
@@ -16,7 +19,16 @@ interface Process {
   endedAt: number | undefined;
 }
 
-type Segment = { kind: "text"; text: string; index: number } | Process;
+interface QuizSegment {
+  kind: "quiz";
+  callId: string;
+  quiz: Quiz;
+}
+
+type Segment = { kind: "text"; text: string; index: number } | QuizSegment | Process;
+
+const quizOf = (part: ToolPart): Quiz | null =>
+  part.name === QUIZ_TOOL && part.status === "done" ? quizFromArguments(part.arguments) : null;
 
 function segments({ parts, finishedAt }: AssistantMessage): Segment[] {
   const out: Segment[] = [];
@@ -26,6 +38,12 @@ function segments({ parts, finishedAt }: AssistantMessage): Segment[] {
       if (!part.text.trim()) return;
       if (previous?.kind === "process") previous.endedAt = part.startedAt;
       out.push({ kind: "text", text: part.text, index });
+      return;
+    }
+    const quiz = part.kind === "tool" ? quizOf(part) : null;
+    if (part.kind === "tool" && quiz) {
+      if (previous?.kind === "process") previous.endedAt = part.startedAt;
+      out.push({ kind: "quiz", callId: part.id, quiz });
     } else if (previous?.kind === "process") previous.steps.push(part);
     else out.push({ kind: "process", steps: [part], index, endedAt: undefined });
   });
@@ -86,18 +104,19 @@ export const AssistantReply = memo(function AssistantReply({
             Using the {skill} skill
           </span>
         ))}
-        {pieces.map((segment, position) =>
-          segment.kind === "text" ? (
-            <ChatMarkdown key={segment.index} text={segment.text} />
-          ) : (
+        {pieces.map((segment, position) => {
+          if (segment.kind === "text") return <ChatMarkdown key={segment.index} text={segment.text} />;
+          if (segment.kind === "quiz")
+            return <QuizCard key={segment.callId} callId={segment.callId} quiz={segment.quiz} />;
+          return (
             <AgentProcess
               key={segment.index}
               steps={segment.steps}
               elapsed={elapsed(segment)}
               active={running && position === pieces.length - 1}
             />
-          ),
-        )}
+          );
+        })}
         {message.status && (
           <div role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
             <Spinner className="size-3.5" aria-hidden />
