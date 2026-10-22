@@ -359,11 +359,21 @@ export const closeTab = (id: number) => closeTabsById([id]);
 
 export const closeGroup = (groupId: number) => closeTabs((tabs) => tabs.filter((tab) => tab.groupId !== groupId));
 
-export const closeOtherTabs = (id: number) => closeTabs((tabs) => tabs.filter((tab) => tab.id === id));
+function closeInScope(id: number, closes: (tab: Tab, at: number, from: number) => boolean) {
+  closeTabs((tabs) => {
+    const from = position(tabs, id);
+    const { groupId } = tabs[from];
+    return tabs.filter((tab, at) => tab.groupId !== groupId || !closes(tab, at, from));
+  });
+}
 
-export const closeTabsToRight = (id: number) => closeTabs((tabs) => tabs.slice(0, position(tabs, id) + 1));
+export const closeOtherTabs = (id: number) => closeInScope(id, (tab) => tab.id !== id);
 
-export const closeTabsToLeft = (id: number) => closeTabs((tabs) => tabs.slice(position(tabs, id)));
+export const closeTabsToRight = (id: number) => closeInScope(id, (_tab, at, from) => at > from);
+
+export const closeTabsToLeft = (id: number) => closeInScope(id, (_tab, at, from) => at < from);
+
+export const closeScopeTabs = (id: number) => closeInScope(id, () => true);
 
 export const closeAllTabs = () => closeTabs(() => []);
 
