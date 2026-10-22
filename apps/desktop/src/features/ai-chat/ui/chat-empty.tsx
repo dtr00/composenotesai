@@ -14,8 +14,14 @@ const NOTE_PROMPTS = [
   "Summarize this note",
   "Clean up the formatting of this note",
   "Make a to-do list from this note",
+  "/quizme this note",
 ];
-const GENERAL_PROMPTS = ["What have I written about ", "Create a note with ideas for ", "Find my notes about "];
+const GENERAL_PROMPTS = [
+  "What have I written about ",
+  "Create a note with ideas for ",
+  "Find my notes about ",
+  "/quizme ",
+];
 const DRAWING_PROMPTS = ["Explain this drawing", "Describe the connections in this drawing", "Summarize this diagram"];
 
 function Suggestions({ prompts }: { prompts: string[] }) {

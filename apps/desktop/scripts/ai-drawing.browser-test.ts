@@ -166,6 +166,7 @@ export async function testAiDrawings() {
       instructions: "Custom agent instructions",
       skills: [],
       loadedSkills: [],
+      command: null,
       notes: [drawing, markdown],
       openNote: drawing,
       tabNotes: [],

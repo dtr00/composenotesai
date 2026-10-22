@@ -12,5 +12,5 @@ Use this when the user wants to study, review, revise or be quizzed on a note.
    - **Key ideas**: the five to ten most important points, one line each.
    - **Terms**: important words with a one-line definition.
    - **Questions**: five questions with the answer hidden under each one as a quote (`> Answer: ...`).
-3. For a quiz, ask the questions in the chat one at a time. Wait for the user's answer, say whether it was right, explain briefly, then ask the next one.
+3. For a quiz, call create_quiz with questions from the note. The user answers in the quiz and you grade it when they submit.
 4. Only use facts from the note. If the note is too short for a good guide, say so.

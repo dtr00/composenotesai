@@ -3,6 +3,8 @@ import { test } from "node:test";
 import { isCompleteObject, jsonArguments, parsePartialObject } from "../src/features/ai-chat/lib/partial-json";
 import { matchingSkills } from "../src/features/ai-chat/lib/skill-match";
 import { appLink, mediaLinkId } from "../src/features/ai-chat/lib/app-links";
+import { commandIn, typedCommands } from "../src/features/ai-chat/lib/chat-command";
+import { parseQuiz, quizFromArguments, quizSubmission } from "../src/features/ai-chat/lib/quiz";
 import { insertMention, matchingTitles, mentionAt } from "../src/features/ai-chat/lib/mention";
 import { toolSummary, type ToolAction } from "../src/features/ai-chat/lib/tool-summary";
 import { workedFor } from "../src/features/ai-chat/lib/work-time";
@@ -347,4 +349,44 @@ test("links are found and compared by page", () => {
   assert.equal(pageKey("https://example.com/a/#part"), pageKey("https://example.com/a"));
   assert.equal(pageKey("javascript:alert(1)"), null);
   assert.equal(pageKey("not a link"), null);
+});
+
+test("quizzes are checked before they are shown", () => {
+  const args = {
+    title: "Cells",
+    questions: [
+      { type: "choice", question: "Powerhouse?", options: ["Nucleus", "Mitochondria"], answer: "mitochondria" },
+      { type: "short", question: "What is DNA?", answer: "Genetic material" },
+    ],
+  };
+  const quiz = parseQuiz(args);
+  assert.equal(quiz.questions.length, 2);
+  assert.deepEqual(quiz.questions[0], {
+    kind: "choice",
+    prompt: "Powerhouse?",
+    options: ["Nucleus", "Mitochondria"],
+    answer: "Mitochondria",
+  });
+  assert.throws(() => parseQuiz({ ...args, questions: [] }));
+  assert.throws(() =>
+    parseQuiz({ title: "x", questions: [{ type: "choice", question: "q", options: ["a", "b"], answer: "c" }] }),
+  );
+  assert.throws(() => parseQuiz({ title: "x", questions: [{ type: "short", question: "q" }] }));
+  assert.equal(quizFromArguments('{"title":"Cells","questions":[{"type":"short","question":"q"'), null);
+  const text = quizSubmission(quiz, ["Nucleus", ""]);
+  assert.match(text, /Answer key: Mitochondria\nUser's answer: Nucleus/);
+  assert.match(text, /User's answer: \(no answer\)/);
+});
+
+test("slash commands are suggested while typing and found when sent", () => {
+  const commands = [{ name: "quizme", description: "", instructions: "" }];
+  assert.equal(typedCommands("/", commands).length, 1);
+  assert.equal(typedCommands("/qu", commands).length, 1);
+  assert.equal(typedCommands("/x", commands).length, 0);
+  assert.equal(typedCommands("/quizme ", commands).length, 0);
+  assert.equal(typedCommands("hello /qu", commands).length, 0);
+  assert.equal(commandIn("/quizme @Biology", commands)?.name, "quizme");
+  assert.equal(commandIn("/QuizMe", commands)?.name, "quizme");
+  assert.equal(commandIn("/quizmenow", commands), null);
+  assert.equal(commandIn("quiz me", commands), null);
 });

@@ -5,6 +5,7 @@ import { requiredString, stringArg, type ToolArgs } from "../lib/tool-args";
 import type { ToolAction } from "../lib/tool-summary";
 import { chatHost } from "./chat-host";
 import type { NoteChange, ToolImage } from "./conversation";
+import { quizTool } from "./quiz-tool";
 import { WEB_TOOLS } from "./web-tools";
 
 export interface ToolOutcome {
@@ -67,7 +68,7 @@ export const toolLabel = (tool: AgentTool, args: ToolArgs, status: keyof ToolVer
   tool.label?.(args, tool.verbs[status]) ?? tool.verbs[status];
 
 export const toolNamed = (name: string): AgentTool | undefined =>
-  [...chatHost().tools, readSkill, ...WEB_TOOLS].find((tool) => tool.name === name);
+  [...chatHost().tools, quizTool, readSkill, ...WEB_TOOLS].find((tool) => tool.name === name);
 
 export function toolAction(name: string): ToolAction | undefined {
   const tool = toolNamed(name);
@@ -75,6 +76,6 @@ export function toolAction(name: string): ToolAction | undefined {
 }
 
 export const agentTools = ({ allowEdits, hasSkills, web, vision }: ToolOptions): AgentTool[] =>
-  [...chatHost().tools, ...(hasSkills ? [readSkill] : []), ...(web ? WEB_TOOLS : [])].filter(
+  [...chatHost().tools, quizTool, ...(hasSkills ? [readSkill] : []), ...(web ? WEB_TOOLS : [])].filter(
     (tool) => (allowEdits || !tool.edits) && (vision || !tool.vision),
   );

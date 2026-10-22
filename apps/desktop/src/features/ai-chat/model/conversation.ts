@@ -57,6 +57,7 @@ export interface UserMessage {
   text: string;
   attachments: ChatAttachment[];
   sentAt: number;
+  quizCallId?: string;
 }
 
 export interface RunStats {
