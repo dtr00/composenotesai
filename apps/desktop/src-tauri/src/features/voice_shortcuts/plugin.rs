@@ -5,11 +5,14 @@ use crate::shared::error::{Error, Result};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_global_shortcut::{Builder, GlobalShortcutExt, ShortcutState};
 
+const IN_USE: &str = "In use by another app";
+
 pub(super) fn start(app: &AppHandle) -> tauri::Result<()> {
     app.plugin(Builder::new().build())?;
     if let Some(record) = app.state::<VoiceShortcuts>().hotkey(Binding::Record) {
         if let Err(e) = bind_record(app, None, &record) {
             eprintln!("[voice shortcuts] couldn't register {record}: {e}");
+            app.state::<VoiceShortcuts>().remember(Binding::Record, None, Some(IN_USE.into()));
         }
     }
     Ok(())

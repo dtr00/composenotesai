@@ -8,7 +8,7 @@ import {
   sameHotkey,
   type Hotkey,
 } from "../../../shared/lib/hotkeys";
-import { isMacOS } from "../../../shared/lib/platform";
+import { isMacOS, isWindows } from "../../../shared/lib/platform";
 import { RESERVED_HOTKEYS } from "./reserved-hotkeys";
 import { getSettings, updateSettings, useSettings } from "./settings-store";
 
@@ -112,7 +112,12 @@ const EDITOR_HOTKEYS: ActionInfo<EditorHotkeyAction>[] = [
 ];
 
 const DICTATION_HOTKEYS: ActionInfo<DictationHotkeyAction>[] = [
-  { action: "dictate", label: "Hold to dictate", group: "Voice", fallback: hotkey("r", { alt: true }) },
+  {
+    action: "dictate",
+    label: "Hold to dictate",
+    group: "Voice",
+    fallback: isWindows ? hotkey("d", { mod: true, shift: true }) : hotkey("r", { alt: true }),
+  },
 ];
 
 export const HOTKEY_ACTIONS: ActionInfo[] = [...APP_HOTKEYS, ...EDITOR_HOTKEYS, ...DICTATION_HOTKEYS];
